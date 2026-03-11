@@ -35,6 +35,7 @@ export async function generateCommitMessage(params: GenerateCommitParams): Promi
   const { data } = await fetchOllamaJson<OllamaChatResponse>(
     params.baseUrl,
     "/api/chat",
+    120000,
     {
       method: "POST",
       headers: {
@@ -67,7 +68,8 @@ export async function generateCommitMessage(params: GenerateCommitParams): Promi
 export async function listOllamaModels(baseUrl: string): Promise<ResolvedModels> {
   const { data, resolvedBaseUrl } = await fetchOllamaJson<OllamaTagsResponse>(
     baseUrl,
-    "/api/tags"
+    "/api/tags",
+    4000
   );
 
   const models = (data.models || [])
@@ -84,14 +86,21 @@ export async function listOllamaModels(baseUrl: string): Promise<ResolvedModels>
 async function fetchOllamaJson<T>(
   baseUrl: string,
   path: string,
+  timeoutMs: number,
   init?: RequestInit
 ): Promise<{ data: T; resolvedBaseUrl: string }> {
   const candidates = await buildBaseUrlCandidates(baseUrl);
   const errors: string[] = [];
 
   for (const candidate of candidates) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
     try {
-      const response = await fetch(`${candidate}${path}`, init);
+      const response = await fetch(`${candidate}${path}`, {
+        ...init,
+        signal: controller.signal,
+      });
 
       if (!response.ok) {
         const text = await response.text();
@@ -105,8 +114,14 @@ async function fetchOllamaJson<T>(
         resolvedBaseUrl: candidate,
       };
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = error instanceof Error
+        ? error.name === "AbortError"
+          ? `Request timed out after ${timeoutMs}ms`
+          : error.message
+        : String(error);
       errors.push(`${candidate}: ${message}`);
+    } finally {
+      clearTimeout(timeout);
     }
   }
 

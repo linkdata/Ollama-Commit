@@ -17,6 +17,10 @@ type IncomingMessage =
   | { type: "refreshModels"; baseUrl: string }
   | { type: "save"; baseUrl: string; model: string; systemPrompt: string; enableThinking: boolean };
 
+type OutgoingMessage =
+  | { type: "state"; payload: SettingsState }
+  | { type: "saveResult"; ok: boolean; message: string };
+
 export class SettingsPanel {
   private static currentPanel: SettingsPanel | undefined;
 
@@ -79,15 +83,40 @@ export class SettingsPanel {
     }
 
     if (message.type === "save") {
-      await updateEditableSettings({
-        baseUrl: message.baseUrl.trim(),
-        model: message.model.trim(),
-        systemPrompt: message.systemPrompt.trim(),
-        enableThinking: message.enableThinking,
-      });
+      await this.panel.webview.postMessage({
+        type: "saveResult",
+        ok: true,
+        message: "Saving in background...",
+      } satisfies OutgoingMessage);
 
-      vscode.window.showInformationMessage("Ollama Commit settings saved");
-      await this.pushState(message.baseUrl);
+      void (async () => {
+        try {
+          await updateEditableSettings({
+            baseUrl: message.baseUrl.trim(),
+            model: message.model.trim(),
+            systemPrompt: message.systemPrompt.trim(),
+            enableThinking: message.enableThinking,
+          });
+
+          await this.panel.webview.postMessage({
+            type: "saveResult",
+            ok: true,
+            message: "Settings saved.",
+          } satisfies OutgoingMessage);
+
+          await this.pushState(message.baseUrl);
+        } catch (error) {
+          const saveError = error instanceof Error ? error.message : String(error);
+
+          await this.panel.webview.postMessage({
+            type: "saveResult",
+            ok: false,
+            message: saveError,
+          } satisfies OutgoingMessage);
+        }
+      })();
+
+      return;
     }
   }
 
@@ -120,7 +149,7 @@ export class SettingsPanel {
     await this.panel.webview.postMessage({
       type: "state",
       payload: state,
-    });
+    } satisfies OutgoingMessage);
   }
 
   private getHtml(webview: vscode.Webview): string {
@@ -367,6 +396,11 @@ export class SettingsPanel {
     const refreshButton = document.getElementById("refreshButton");
     const saveButton = document.getElementById("saveButton");
 
+    function setBusy(isBusy) {
+      refreshButton.disabled = isBusy;
+      saveButton.disabled = isBusy;
+    }
+
     function setStatus(message, kind) {
       status.textContent = message || "";
       status.className = kind ? "status " + kind : "status";
@@ -402,12 +436,19 @@ export class SettingsPanel {
     }
 
     window.addEventListener("message", (event) => {
-      const { type, payload } = event.data;
+      const { type, payload, ok, message } = event.data;
+
+      if (type === "saveResult") {
+        setBusy(false);
+        setStatus(message || (ok ? "Settings saved." : "Failed to save settings."), ok ? "ok" : "error");
+        return;
+      }
 
       if (type !== "state") {
         return;
       }
 
+      setBusy(false);
       baseUrlInput.value = payload.baseUrl || "";
       systemPromptInput.value = payload.systemPrompt || "";
       enableThinkingInput.checked = Boolean(payload.enableThinking);
@@ -426,6 +467,7 @@ export class SettingsPanel {
     });
 
     refreshButton.addEventListener("click", () => {
+      setBusy(true);
       setStatus("Loading models...", "");
       vscode.postMessage({
         type: "refreshModels",
@@ -434,7 +476,7 @@ export class SettingsPanel {
     });
 
     saveButton.addEventListener("click", () => {
-      setStatus("Saving settings...", "");
+      setStatus("Saving in background...", "");
       vscode.postMessage({
         type: "save",
         baseUrl: baseUrlInput.value,

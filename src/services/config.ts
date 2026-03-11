@@ -31,11 +31,25 @@ export type EditableSettings = Pick<OllamaCommitConfig, "baseUrl" | "model" | "s
 
 export async function updateEditableSettings(settings: EditableSettings): Promise<void> {
   const config = vscode.workspace.getConfiguration("ollamacommit");
+  const updates: Array<[keyof EditableSettings, string | boolean]> = [];
 
-  await Promise.all([
-    config.update("baseUrl", settings.baseUrl, vscode.ConfigurationTarget.Global),
-    config.update("model", settings.model, vscode.ConfigurationTarget.Global),
-    config.update("systemPrompt", settings.systemPrompt, vscode.ConfigurationTarget.Global),
-    config.update("enableThinking", settings.enableThinking, vscode.ConfigurationTarget.Global),
-  ]);
+  if (config.get<string>("baseUrl", "http://127.0.0.1:11434") !== settings.baseUrl) {
+    updates.push(["baseUrl", settings.baseUrl]);
+  }
+
+  if (config.get<string>("model", "qwen2.5-coder:7b") !== settings.model) {
+    updates.push(["model", settings.model]);
+  }
+
+  if (config.get<string>("systemPrompt", defaultSystemPrompt) !== settings.systemPrompt) {
+    updates.push(["systemPrompt", settings.systemPrompt]);
+  }
+
+  if (config.get<boolean>("enableThinking", false) !== settings.enableThinking) {
+    updates.push(["enableThinking", settings.enableThinking]);
+  }
+
+  for (const [key, value] of updates) {
+    await config.update(key, value, vscode.ConfigurationTarget.Global);
+  }
 }
