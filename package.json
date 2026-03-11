@@ -5,6 +5,10 @@
   "version": "0.0.1",
   "publisher": "apichart",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Nice0w0/ollamacommit.git"
+  },
   "engines": {
     "vscode": "^1.90.0"
   },
@@ -42,12 +46,7 @@
       "scm/title": [
         {
           "command": "ollamacommit.generateCommit",
-          "group": "navigation@1",
-          "when": "scmProvider == git"
-        },
-        {
-          "command": "ollamacommit.openSettings",
-          "group": "navigation@2",
+          "group": "navigation@-100",
           "when": "scmProvider == git"
         }
       ]
