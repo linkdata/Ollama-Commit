@@ -3,6 +3,21 @@ import { getConfig } from "../services/config";
 import { getStagedDiff, getWorkingTreeDiff, stageAllChanges } from "../services/git";
 import { generateCommitMessage } from "../services/ollama";
 
+type GitExtensionApi = {
+  getAPI(version: 1): GitApi;
+};
+
+type GitApi = {
+  repositories: GitRepository[];
+};
+
+type GitRepository = {
+  rootUri: vscode.Uri;
+  inputBox: {
+    value: string;
+  };
+};
+
 export async function runGenerateCommit() {
   const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
 
@@ -41,18 +56,29 @@ export async function runGenerateCommit() {
         return;
       }
 
-      const scm = vscode.scm;
-      if (scm.inputBox) {
-        scm.inputBox.value = message;
-      } else {
+      const insertedIntoInput = await tryInsertCommitMessage(workspaceFolder.uri, message);
+
+      if (!insertedIntoInput || config.copyToClipboard) {
         await vscode.env.clipboard.writeText(message);
       }
 
-      if (config.copyToClipboard) {
-        await vscode.env.clipboard.writeText(message);
+      if (insertedIntoInput) {
+        await vscode.commands.executeCommand("workbench.view.scm");
+        vscode.window.setStatusBarMessage(
+          "Ollama Commit filled the Source Control commit message",
+          3000
+        );
+        return;
       }
 
-      vscode.window.showInformationMessage("Commit message generated");
+      const action = await vscode.window.showWarningMessage(
+        "Could not insert into the Source Control input box. The commit message was copied to the clipboard.",
+        "Preview"
+      );
+
+      if (action === "Preview") {
+        await showCommitMessagePreview(message);
+      }
     }
   );
 }
@@ -86,4 +112,58 @@ async function resolveDiff(cwd: string): Promise<string | null> {
   }
 
   return null;
+}
+
+async function tryInsertCommitMessage(workspaceUri: vscode.Uri, message: string): Promise<boolean> {
+  const insertedWithGitApi = await tryInsertWithGitExtension(workspaceUri, message);
+  if (insertedWithGitApi) {
+    return true;
+  }
+
+  const scm = vscode.scm;
+  if (scm.inputBox) {
+    scm.inputBox.value = message;
+    return true;
+  }
+
+  return false;
+}
+
+async function tryInsertWithGitExtension(workspaceUri: vscode.Uri, message: string): Promise<boolean> {
+  const gitExtension = vscode.extensions.getExtension<GitExtensionApi>("vscode.git");
+  if (!gitExtension) {
+    return false;
+  }
+
+  const gitApi = gitExtension.isActive
+    ? gitExtension.exports.getAPI(1)
+    : (await gitExtension.activate()).getAPI(1);
+
+  const repository = pickRepository(gitApi.repositories, workspaceUri);
+  if (!repository) {
+    return false;
+  }
+
+  repository.inputBox.value = message;
+  return true;
+}
+
+function pickRepository(repositories: GitRepository[], workspaceUri: vscode.Uri): GitRepository | undefined {
+  const workspacePath = workspaceUri.fsPath;
+
+  return repositories
+    .filter((repository) => workspacePath.startsWith(repository.rootUri.fsPath))
+    .sort((left, right) => right.rootUri.fsPath.length - left.rootUri.fsPath.length)[0];
+}
+
+async function showCommitMessagePreview(message: string): Promise<void> {
+  const document = await vscode.workspace.openTextDocument({
+    content: message,
+    language: "plaintext",
+  });
+
+  await vscode.window.showTextDocument(document, {
+    preview: true,
+    viewColumn: vscode.ViewColumn.Beside,
+  });
 }
