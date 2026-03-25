@@ -39,23 +39,25 @@ export async function runGenerateCommit() {
   await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
-      title: "Generating commit message with Ollama...",
+      title: "Generating commit message...",
       cancellable: false
     },
     async () => {
-      const message = await generateCommitMessage({
+      const result = await generateCommitMessage({
         baseUrl: config.baseUrl,
         model: config.model,
+        groqApiKey: config.groqApiKey,
+        groqModel: config.groqModel,
+        geminiApiKey: config.geminiApiKey,
+        geminiModel: config.geminiModel,
+        openaiModel: config.openaiModel,
         systemPrompt: config.systemPrompt,
         enableThinking: config.enableThinking,
         diff: trimmedDiff,
         temperature: config.temperature
       });
 
-      if (!message) {
-        vscode.window.showWarningMessage("Ollama returned an empty commit message");
-        return;
-      }
+      const { message, provider, model } = result;
 
       const insertedIntoInput = await tryInsertCommitMessage(workspaceFolder.uri, message);
 
@@ -66,8 +68,8 @@ export async function runGenerateCommit() {
       if (insertedIntoInput) {
         await vscode.commands.executeCommand("workbench.view.scm");
         vscode.window.setStatusBarMessage(
-          "Ollama Commit filled the Source Control commit message",
-          3000
+          `Ollama Commit filled the Source Control commit message using ${provider} (${model})`,
+          5000
         );
         return;
       }

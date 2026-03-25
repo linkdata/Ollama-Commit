@@ -1,21 +1,43 @@
 {
   "name": "ollamacommit",
-  "displayName": "Ollama Commit",
-  "description": "Generate git commit messages in VS Code using a local Ollama model.",
-  "version": "0.0.6",
-  "publisher": "apichart",
-  "icon": "media/icon.png",
+  "displayName": "Ollama Commit Message",
+  "description": "Generate Git commit messages in VS Code using Ollama with Groq, Gemini, and Codex/OpenAI fallbacks.",
+  "version": "0.2.0",
+  "publisher": "Nice0w0",
+  "icon": "media/ollama-commit-title.png",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/Nice0w0/ollamacommit.git"
   },
+  "homepage": "https://github.com/Nice0w0/ollamacommit#readme",
+  "bugs": {
+    "url": "https://github.com/Nice0w0/ollamacommit/issues"
+  },
   "engines": {
     "vscode": "^1.90.0"
   },
   "categories": [
-    "Source Control",
+    "SCM Providers",
     "Other"
+  ],
+  "galleryBanner": {
+    "color": "#0f172a",
+    "theme": "dark"
+  },
+  "keywords": [
+    "ollama",
+    "groq",
+    "gemini",
+    "openai",
+    "codex",
+    "git",
+    "commit",
+    "commit message",
+    "source control",
+    "conventional commits",
+    "ai",
+    "llm"
   ],
   "activationEvents": [
     "onCommand:ollamacommit.generateCommit",
@@ -65,15 +87,40 @@
           "default": "qwen2.5-coder:7b",
           "description": "Ollama model to use for generating commit messages."
         },
+        "ollamacommit.groqApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Groq API key used when Ollama is unavailable."
+        },
+        "ollamacommit.groqModel": {
+          "type": "string",
+          "default": "openai/gpt-oss-20b",
+          "description": "Groq model used as the first fallback when Ollama is unavailable."
+        },
+        "ollamacommit.geminiApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Gemini API key used when Ollama and Groq are unavailable."
+        },
+        "ollamacommit.geminiModel": {
+          "type": "string",
+          "default": "gemini-2.0-flash-lite",
+          "description": "Gemini model used as the second fallback when Ollama and Groq are unavailable."
+        },
+        "ollamacommit.openaiModel": {
+          "type": "string",
+          "default": "gpt-5-mini",
+          "description": "OpenAI model used as the last fallback when a local Codex login provides an API key."
+        },
         "ollamacommit.systemPrompt": {
           "type": "string",
-          "default": "You are a Git commit message generator.\n\nWrite a concise, clear, professional commit message from the provided staged diff.\n\nRequirements:\n- Use Conventional Commits format:\n  <type>(optional scope): <subject>\n- Allowed types:\n  feat, fix, docs, style, refactor, perf, test, chore, build, ci\n- Subject rules:\n  - lowercase\n  - imperative mood\n  - no trailing period\n  - maximum 72 characters\n\nBody rules:\n- Add a body only when necessary\n- Explain why, not what\n- Wrap body lines at 72 characters\n\nBehavior:\n- Infer the most appropriate type and optional scope from the diff\n- Do not include file names, diffs, bullets, or explanations\n- Do not include reasoning, analysis, or thinking text\n- Do not use markdown, XML tags, or code fences\n\nOutput:\n- Return only the final commit message",
-          "markdownDescription": "System prompt sent to Ollama before the staged diff."
+          "default": "You are an assistant that writes professional git commit messages from staged diff.\n\nWrite the commit message in this format:\n\n<type>(optional scope): <subject>\n\n- <specific change 1>\n- <specific change 2>\n- <specific change 3>\n\nInstructions:\n- Prefer Conventional Commits\n- The subject must capture the primary purpose of the commit\n- The bullet list must enumerate the concrete changes\n- Do not give only an overall summary\n- Break down the diff into distinct meaningful modifications\n- Mention each important code/config/test/doc change separately\n- Be specific about what was changed\n\nGood bullet examples:\n- add null check before accessing user profile\n- rename orderStatus to paymentStatus in checkout flow\n- update nginx config to increase client body size limit\n- remove unused retry wrapper from payment service\n- add test coverage for invalid token handling\n- change sort order to newest-first in activity endpoint\n\nBad bullet examples:\n- improve system\n- update code\n- fix issues\n- refactor project\n- make changes\n\nConstraints:\n- subject in lowercase\n- imperative mood\n- no trailing period\n- subject max 72 characters\n- use concise bullets\n- do not include file paths unless necessary for clarity\n- do not include reasoning or analysis\n- do not include markdown fences\n\nOutput:\n- Return only the final commit message",
+          "markdownDescription": "System prompt sent to the active provider before the staged diff."
         },
         "ollamacommit.enableThinking": {
           "type": "boolean",
           "default": false,
-          "description": "Allow Ollama models that support thinking/reasoning mode to use it internally before returning the final commit message."
+          "description": "Allow supported models to use thinking/reasoning mode internally before returning the final commit message."
         },
         "ollamacommit.maxDiffChars": {
           "type": "number",
@@ -101,7 +148,8 @@
     "compile": "npm run build",
     "watch": "tsc -w -p .",
     "vscode:prepublish": "npm run build",
-    "package": "vsce package --no-rewrite-relative-links"
+    "package": "vsce package --no-dependencies --no-rewrite-relative-links",
+    "publish:marketplace": "vsce publish --no-dependencies"
   },
   "devDependencies": {
     "@types/node": "^22.13.14",

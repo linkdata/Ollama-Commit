@@ -1,0 +1,10 @@
+src/
+tsconfig.json
+.gitignore
+.vscodeignore
+node_modules/
+*.vsix
+ollamacommit-*.vsix
+dist/**/*.map
+media/generate-dark.svg
+media/generate-light.svg

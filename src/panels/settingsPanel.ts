@@ -5,6 +5,11 @@ import { listOllamaModels } from "../services/ollama";
 type SettingsState = {
   baseUrl: string;
   model: string;
+  groqApiKey: string;
+  groqModel: string;
+  geminiApiKey: string;
+  geminiModel: string;
+  openaiModel: string;
   systemPrompt: string;
   enableThinking: boolean;
   models: string[];
@@ -15,7 +20,18 @@ type SettingsState = {
 type IncomingMessage =
   | { type: "ready" }
   | { type: "refreshModels"; baseUrl: string }
-  | { type: "save"; baseUrl: string; model: string; systemPrompt: string; enableThinking: boolean };
+  | {
+      type: "save";
+      baseUrl: string;
+      model: string;
+      groqApiKey: string;
+      groqModel: string;
+      geminiApiKey: string;
+      geminiModel: string;
+      openaiModel: string;
+      systemPrompt: string;
+      enableThinking: boolean;
+    };
 
 type OutgoingMessage =
   | { type: "state"; payload: SettingsState }
@@ -94,6 +110,11 @@ export class SettingsPanel {
           await updateEditableSettings({
             baseUrl: message.baseUrl.trim(),
             model: message.model.trim(),
+            groqApiKey: message.groqApiKey.trim(),
+            groqModel: message.groqModel.trim(),
+            geminiApiKey: message.geminiApiKey.trim(),
+            geminiModel: message.geminiModel.trim(),
+            openaiModel: message.openaiModel.trim(),
             systemPrompt: message.systemPrompt.trim(),
             enableThinking: message.enableThinking,
           });
@@ -139,6 +160,11 @@ export class SettingsPanel {
     const state: SettingsState = {
       baseUrl,
       model: config.model,
+      groqApiKey: config.groqApiKey,
+      groqModel: config.groqModel,
+      geminiApiKey: config.geminiApiKey,
+      geminiModel: config.geminiModel,
+      openaiModel: config.openaiModel,
       systemPrompt: config.systemPrompt,
       enableThinking: config.enableThinking,
       models,
@@ -342,7 +368,7 @@ export class SettingsPanel {
   <main class="shell">
     <section class="hero">
       <h1>Ollama Commit Settings</h1>
-      <p>Choose the Ollama model for commit generation and edit the system prompt used for every request.</p>
+      <p>Try Ollama first, then fall back to Groq and Gemini when Ollama is unavailable.</p>
     </section>
 
     <section class="card">
@@ -360,6 +386,34 @@ export class SettingsPanel {
         <select id="modelSelect"></select>
         <input id="modelInput" type="text" placeholder="Type a model name, for example qwen2.5-coder:7b" />
         <div class="hint">Pick from the detected models or type a custom model name manually.</div>
+      </div>
+
+      <div class="field">
+        <label for="groqApiKey">Groq API Key</label>
+        <input id="groqApiKey" type="password" placeholder="Optional fallback key" />
+        <div class="hint">Used only if Ollama cannot be reached.</div>
+      </div>
+
+      <div class="field">
+        <label for="groqModel">Groq Model</label>
+        <input id="groqModel" type="text" placeholder="openai/gpt-oss-20b" />
+      </div>
+
+      <div class="field">
+        <label for="geminiApiKey">Gemini API Key</label>
+        <input id="geminiApiKey" type="password" placeholder="Optional fallback key" />
+        <div class="hint">Used after Groq if Ollama is unavailable or Groq fails.</div>
+      </div>
+
+      <div class="field">
+        <label for="geminiModel">Gemini Model</label>
+        <input id="geminiModel" type="text" placeholder="gemini-2.0-flash-lite" />
+      </div>
+
+      <div class="field">
+        <label for="openaiModel">Codex/OpenAI Fallback Model</label>
+        <input id="openaiModel" type="text" placeholder="gpt-5-mini" />
+        <div class="hint">Used last, only when a local Codex login exposes an OpenAI API key through <code>~/.codex/auth.json</code> or <code>OPENAI_API_KEY</code>.</div>
       </div>
 
       <div class="field">
@@ -390,6 +444,11 @@ export class SettingsPanel {
     const baseUrlInput = document.getElementById("baseUrl");
     const modelSelect = document.getElementById("modelSelect");
     const modelInput = document.getElementById("modelInput");
+    const groqApiKeyInput = document.getElementById("groqApiKey");
+    const groqModelInput = document.getElementById("groqModel");
+    const geminiApiKeyInput = document.getElementById("geminiApiKey");
+    const geminiModelInput = document.getElementById("geminiModel");
+    const openaiModelInput = document.getElementById("openaiModel");
     const systemPromptInput = document.getElementById("systemPrompt");
     const enableThinkingInput = document.getElementById("enableThinking");
     const status = document.getElementById("status");
@@ -453,6 +512,11 @@ export class SettingsPanel {
       systemPromptInput.value = payload.systemPrompt || "";
       enableThinkingInput.checked = Boolean(payload.enableThinking);
       modelInput.value = payload.model || "";
+      groqApiKeyInput.value = payload.groqApiKey || "";
+      groqModelInput.value = payload.groqModel || "";
+      geminiApiKeyInput.value = payload.geminiApiKey || "";
+      geminiModelInput.value = payload.geminiModel || "";
+      openaiModelInput.value = payload.openaiModel || "";
       setModels(payload.models || [], payload.model || "");
 
       if (payload.error) {
@@ -460,7 +524,7 @@ export class SettingsPanel {
       } else if (payload.resolvedBaseUrl && payload.resolvedBaseUrl !== payload.baseUrl) {
         setStatus("Connected through " + payload.resolvedBaseUrl + " while keeping your saved URL unchanged.", "ok");
       } else if ((payload.models || []).length > 0) {
-        setStatus("Models loaded from Ollama.", "ok");
+        setStatus("Models loaded from Ollama. Fallback order: Groq, Gemini, then Codex/OpenAI.", "ok");
       } else {
         setStatus("");
       }
@@ -481,6 +545,11 @@ export class SettingsPanel {
         type: "save",
         baseUrl: baseUrlInput.value,
         model: modelInput.value,
+        groqApiKey: groqApiKeyInput.value,
+        groqModel: groqModelInput.value,
+        geminiApiKey: geminiApiKeyInput.value,
+        geminiModel: geminiModelInput.value,
+        openaiModel: openaiModelInput.value,
         systemPrompt: systemPromptInput.value,
         enableThinking: enableThinkingInput.checked
       });
