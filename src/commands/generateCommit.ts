@@ -54,6 +54,7 @@ export async function runGenerateCommit() {
         codexPath: config.codexPath,
         systemPrompt: config.systemPrompt,
         enableThinking: config.enableThinking,
+        ollamaUnavailableCooldownMs: config.ollamaUnavailableCooldownMs,
         diff: trimmedDiff,
         temperature: config.temperature,
         cwd
