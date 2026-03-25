@@ -51,10 +51,12 @@ export async function runGenerateCommit() {
         geminiApiKey: config.geminiApiKey,
         geminiModel: config.geminiModel,
         openaiModel: config.openaiModel,
+        codexPath: config.codexPath,
         systemPrompt: config.systemPrompt,
         enableThinking: config.enableThinking,
         diff: trimmedDiff,
-        temperature: config.temperature
+        temperature: config.temperature,
+        cwd
       });
 
       const { message, provider, model } = result;

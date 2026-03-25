@@ -6,7 +6,7 @@
 
 Generate Git commit messages in VS Code with Ollama, with Groq, Gemini, and Codex/OpenAI fallback support.
 
-Ollama Commit is a lightweight VS Code extension that reads your Git diff, sends it to your local or remote Ollama server, and writes the generated commit message into the Source Control input box for you. If Ollama is unavailable, it can fall back to Groq, then Gemini, and finally OpenAI when a local Codex login exposes an API key.
+Ollama Commit is a lightweight VS Code extension that reads your Git diff, sends it to your local or remote Ollama server, and writes the generated commit message into the Source Control input box for you. If Ollama is unavailable, it can fall back to local Codex CLI first, then Groq, then Gemini.
 
 ## Why Use It
 
@@ -39,8 +39,8 @@ Optional fallback setup:
 
 1. Create a Groq API key and set `ollamacommit.groqApiKey`.
 2. Create a Gemini API key and set `ollamacommit.geminiApiKey`.
-3. Optionally keep a local Codex login on the same machine so the extension can reuse `~/.codex/auth.json` as a final OpenAI fallback.
-4. Keep Ollama as the primary provider. The extension will try Groq first, Gemini second, and Codex/OpenAI last if Ollama cannot be reached.
+3. Optionally keep a local Codex login on the same machine so the extension can use `codex exec` as a final fallback.
+4. Keep Ollama as the primary provider. The extension will try Codex first, Groq second, and Gemini third if Ollama cannot be reached.
 
 Example:
 
@@ -65,7 +65,7 @@ http://127.0.0.1:11434
    - `Use Unstaged Changes`
 3. The diff is trimmed to the configured max size.
 4. The extension sends the diff to Ollama.
-5. If Ollama is unavailable, the extension tries Groq, then Gemini, then OpenAI through a local Codex login if available.
+5. If Ollama is unavailable, the extension tries local Codex CLI, then Groq, then Gemini.
 6. The active provider returns a commit message.
 7. The result is inserted into the VS Code Source Control commit box.
 
@@ -94,7 +94,8 @@ Or search for `Ollama Commit` in VS Code Settings.
 | `ollamacommit.groqModel` | Groq model used as the first fallback | `openai/gpt-oss-20b` |
 | `ollamacommit.geminiApiKey` | Gemini API key used when Ollama and Groq are unavailable | `""` |
 | `ollamacommit.geminiModel` | Gemini model used as the second fallback | `gemini-2.0-flash-lite` |
-| `ollamacommit.openaiModel` | OpenAI model used as the last fallback when a local Codex login provides an API key | `gpt-5-mini` |
+| `ollamacommit.openaiModel` | Optional model override for the last fallback through local Codex CLI. Leave empty to use Codex's configured default model | `""` |
+| `ollamacommit.codexPath` | Optional absolute path to the Codex CLI binary when the extension host PATH does not include it | `""` |
 | `ollamacommit.systemPrompt` | System prompt sent before the diff | Built-in prompt |
 | `ollamacommit.enableThinking` | Allow model thinking mode before the final answer | `false` |
 | `ollamacommit.maxDiffChars` | Maximum diff characters sent to Ollama | `12000` |
@@ -141,9 +142,9 @@ The extension sends your Git diff to the active provider:
 - Ollama through `ollamacommit.baseUrl`
 - Groq when `ollamacommit.groqApiKey` is configured
 - Gemini when `ollamacommit.geminiApiKey` is configured
-- OpenAI when a local Codex login exposes an API key through `~/.codex/auth.json` or `OPENAI_API_KEY`
+- Codex CLI when you are logged in locally and `codex exec` is available in the extension host environment
 
-If you run Ollama locally, your data stays in your local environment. Cloud fallbacks send the diff to the selected provider, and the OpenAI fallback may use paid API usage from the account tied to your Codex login.
+If you run Ollama locally, your data stays in your local environment. Cloud fallbacks send the diff to the selected provider, and the Codex fallback sends the diff through your local Codex CLI session.
 
 ## License
 

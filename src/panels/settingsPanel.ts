@@ -10,6 +10,7 @@ type SettingsState = {
   geminiApiKey: string;
   geminiModel: string;
   openaiModel: string;
+  codexPath: string;
   systemPrompt: string;
   enableThinking: boolean;
   models: string[];
@@ -29,6 +30,7 @@ type IncomingMessage =
       geminiApiKey: string;
       geminiModel: string;
       openaiModel: string;
+      codexPath: string;
       systemPrompt: string;
       enableThinking: boolean;
     };
@@ -115,6 +117,7 @@ export class SettingsPanel {
             geminiApiKey: message.geminiApiKey.trim(),
             geminiModel: message.geminiModel.trim(),
             openaiModel: message.openaiModel.trim(),
+            codexPath: message.codexPath.trim(),
             systemPrompt: message.systemPrompt.trim(),
             enableThinking: message.enableThinking,
           });
@@ -165,6 +168,7 @@ export class SettingsPanel {
       geminiApiKey: config.geminiApiKey,
       geminiModel: config.geminiModel,
       openaiModel: config.openaiModel,
+      codexPath: config.codexPath,
       systemPrompt: config.systemPrompt,
       enableThinking: config.enableThinking,
       models,
@@ -368,7 +372,7 @@ export class SettingsPanel {
   <main class="shell">
     <section class="hero">
       <h1>Ollama Commit Settings</h1>
-      <p>Try Ollama first, then fall back to Groq and Gemini when Ollama is unavailable.</p>
+      <p>Try Ollama first, then fall back to local Codex CLI, then API-key providers when Ollama is unavailable.</p>
     </section>
 
     <section class="card">
@@ -412,8 +416,14 @@ export class SettingsPanel {
 
       <div class="field">
         <label for="openaiModel">Codex/OpenAI Fallback Model</label>
-        <input id="openaiModel" type="text" placeholder="gpt-5-mini" />
-        <div class="hint">Used last, only when a local Codex login exposes an OpenAI API key through <code>~/.codex/auth.json</code> or <code>OPENAI_API_KEY</code>.</div>
+        <input id="openaiModel" type="text" placeholder="Leave empty to use Codex default model" />
+        <div class="hint">Used last through local <code>codex exec</code>. Leave empty to use the model already configured in Codex.</div>
+      </div>
+
+      <div class="field">
+        <label for="codexPath">Codex CLI Path</label>
+        <input id="codexPath" type="text" placeholder="Leave empty to auto-detect codex" />
+        <div class="hint">Optional absolute path to the <code>codex</code> binary when the extension host PATH does not include it.</div>
       </div>
 
       <div class="field">
@@ -449,6 +459,7 @@ export class SettingsPanel {
     const geminiApiKeyInput = document.getElementById("geminiApiKey");
     const geminiModelInput = document.getElementById("geminiModel");
     const openaiModelInput = document.getElementById("openaiModel");
+    const codexPathInput = document.getElementById("codexPath");
     const systemPromptInput = document.getElementById("systemPrompt");
     const enableThinkingInput = document.getElementById("enableThinking");
     const status = document.getElementById("status");
@@ -517,6 +528,7 @@ export class SettingsPanel {
       geminiApiKeyInput.value = payload.geminiApiKey || "";
       geminiModelInput.value = payload.geminiModel || "";
       openaiModelInput.value = payload.openaiModel || "";
+      codexPathInput.value = payload.codexPath || "";
       setModels(payload.models || [], payload.model || "");
 
       if (payload.error) {
@@ -524,7 +536,7 @@ export class SettingsPanel {
       } else if (payload.resolvedBaseUrl && payload.resolvedBaseUrl !== payload.baseUrl) {
         setStatus("Connected through " + payload.resolvedBaseUrl + " while keeping your saved URL unchanged.", "ok");
       } else if ((payload.models || []).length > 0) {
-        setStatus("Models loaded from Ollama. Fallback order: Groq, Gemini, then Codex/OpenAI.", "ok");
+        setStatus("Models loaded from Ollama. Fallback order: Codex, Groq, then Gemini.", "ok");
       } else {
         setStatus("");
       }
@@ -550,6 +562,7 @@ export class SettingsPanel {
         geminiApiKey: geminiApiKeyInput.value,
         geminiModel: geminiModelInput.value,
         openaiModel: openaiModelInput.value,
+        codexPath: codexPathInput.value,
         systemPrompt: systemPromptInput.value,
         enableThinking: enableThinkingInput.checked
       });

@@ -2,7 +2,7 @@
   "name": "ollamacommit",
   "displayName": "Ollama Commit Message",
   "description": "Generate Git commit messages in VS Code using Ollama with Groq, Gemini, and Codex/OpenAI fallbacks.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "publisher": "Nice0w0",
   "icon": "media/ollama-commit-title.png",
   "license": "MIT",
@@ -109,8 +109,13 @@
         },
         "ollamacommit.openaiModel": {
           "type": "string",
-          "default": "gpt-5-mini",
-          "description": "OpenAI model used as the last fallback when a local Codex login provides an API key."
+          "default": "",
+          "description": "Optional model override for the last fallback through local Codex CLI. Leave empty to use Codex's configured default model."
+        },
+        "ollamacommit.codexPath": {
+          "type": "string",
+          "default": "",
+          "description": "Optional absolute path to the Codex CLI binary when the extension host PATH does not include it."
         },
         "ollamacommit.systemPrompt": {
           "type": "string",

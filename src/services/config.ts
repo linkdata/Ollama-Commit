@@ -58,6 +58,7 @@ export type OllamaCommitConfig = {
   geminiApiKey: string;
   geminiModel: string;
   openaiModel: string;
+  codexPath: string;
   systemPrompt: string;
   enableThinking: boolean;
   maxDiffChars: number;
@@ -75,7 +76,8 @@ export function getConfig(): OllamaCommitConfig {
     groqModel: config.get<string>("groqModel", "openai/gpt-oss-20b"),
     geminiApiKey: config.get<string>("geminiApiKey", ""),
     geminiModel: config.get<string>("geminiModel", "gemini-2.0-flash-lite"),
-    openaiModel: config.get<string>("openaiModel", "gpt-5-mini"),
+    openaiModel: config.get<string>("openaiModel", ""),
+    codexPath: config.get<string>("codexPath", ""),
     systemPrompt: config.get<string>("systemPrompt", defaultSystemPrompt),
     enableThinking: config.get<boolean>("enableThinking", false),
     maxDiffChars: config.get<number>("maxDiffChars", 12000),
@@ -86,7 +88,7 @@ export function getConfig(): OllamaCommitConfig {
 
 export type EditableSettings = Pick<
   OllamaCommitConfig,
-  "baseUrl" | "model" | "groqApiKey" | "groqModel" | "geminiApiKey" | "geminiModel" | "openaiModel" | "systemPrompt" | "enableThinking"
+  "baseUrl" | "model" | "groqApiKey" | "groqModel" | "geminiApiKey" | "geminiModel" | "openaiModel" | "codexPath" | "systemPrompt" | "enableThinking"
 >;
 
 export async function updateEditableSettings(settings: EditableSettings): Promise<void> {
@@ -117,8 +119,12 @@ export async function updateEditableSettings(settings: EditableSettings): Promis
     updates.push(["geminiModel", settings.geminiModel]);
   }
 
-  if (config.get<string>("openaiModel", "gpt-5-mini") !== settings.openaiModel) {
+  if (config.get<string>("openaiModel", "") !== settings.openaiModel) {
     updates.push(["openaiModel", settings.openaiModel]);
+  }
+
+  if (config.get<string>("codexPath", "") !== settings.codexPath) {
+    updates.push(["codexPath", settings.codexPath]);
   }
 
   if (config.get<string>("systemPrompt", defaultSystemPrompt) !== settings.systemPrompt) {

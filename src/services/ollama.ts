@@ -1,6 +1,8 @@
-import { readFile } from "node:fs/promises";
+import { access, readFile, readdir } from "node:fs/promises";
+import { execFile } from "node:child_process";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { promisify } from "node:util";
 
 export type GenerateCommitParams = {
   baseUrl: string;
@@ -10,15 +12,17 @@ export type GenerateCommitParams = {
   geminiApiKey: string;
   geminiModel: string;
   openaiModel: string;
+  codexPath: string;
   systemPrompt: string;
   enableThinking: boolean;
   diff: string;
   temperature: number;
+  cwd?: string;
 };
 
 export type GenerateCommitResult = {
   message: string;
-  provider: "ollama" | "groq" | "gemini" | "openai";
+  provider: "ollama" | "groq" | "gemini" | "codex";
   model: string;
 };
 
@@ -50,14 +54,12 @@ type GeminiGenerateContentResponse = {
   }>;
 };
 
-type OpenAiResponsesResponse = {
-  output_text?: string;
-};
-
 type ResolvedModels = {
   models: string[];
   resolvedBaseUrl: string;
 };
+
+const execFileAsync = promisify(execFile);
 
 export async function generateCommitMessage(params: GenerateCommitParams): Promise<GenerateCommitResult> {
   const prompt = [
@@ -78,6 +80,21 @@ export async function generateCommitMessage(params: GenerateCommitParams): Promi
     };
   } catch (error) {
     failures.push(`Ollama: ${formatError(error)}`);
+  }
+
+  if (await hasCodexLogin()) {
+    try {
+      const message = await generateWithCodex(params, prompt);
+      return {
+        message,
+        provider: "codex",
+        model: params.openaiModel || "codex default",
+      };
+    } catch (error) {
+      failures.push(`Codex CLI: ${formatError(error)}`);
+    }
+  } else {
+    failures.push("Codex CLI: skipped because no local Codex login was found");
   }
 
   if (params.groqApiKey.trim()) {
@@ -108,22 +125,6 @@ export async function generateCommitMessage(params: GenerateCommitParams): Promi
     }
   } else {
     failures.push("Gemini: skipped because no API key is configured");
-  }
-
-  const openAiApiKey = await getOpenAiApiKeyFromCodex();
-  if (openAiApiKey) {
-    try {
-      const message = await generateWithOpenAi(params, prompt, openAiApiKey);
-      return {
-        message,
-        provider: "openai",
-        model: params.openaiModel,
-      };
-    } catch (error) {
-      failures.push(`OpenAI via Codex login: ${formatError(error)}`);
-    }
-  } else {
-    failures.push("OpenAI via Codex login: skipped because no local Codex API key was found");
   }
 
   throw new Error(`Unable to generate a commit message. ${failures.join(" | ")}`);
@@ -267,48 +268,45 @@ async function generateWithGemini(params: GenerateCommitParams, prompt: string):
   return requireCommitMessage(content, "Gemini");
 }
 
-async function generateWithOpenAi(
-  params: GenerateCommitParams,
-  prompt: string,
-  apiKey: string
-): Promise<string> {
-  const data = await fetchJson<OpenAiResponsesResponse>(
-    "https://api.openai.com/v1/responses",
-    45000,
+async function generateWithCodex(params: GenerateCommitParams, prompt: string): Promise<string> {
+  const instruction = [
+    params.systemPrompt,
+    "",
+    "Task:",
+    prompt
+  ].join("\n");
+
+  const cwd = params.cwd || process.cwd();
+  const codexExecutable = await resolveCodexExecutable(params.codexPath);
+  const configuredModel = params.openaiModel.trim();
+  const args = [
+    "exec",
+    "--skip-git-repo-check",
+    "--sandbox",
+    "read-only",
+    "--color",
+    "never",
+    "-C",
+    cwd,
+  ];
+
+  if (configuredModel) {
+    args.push("-m", configuredModel);
+  }
+
+  args.push(instruction);
+
+  const { stdout } = await execFileAsync(
+    codexExecutable,
+    args,
     {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: params.openaiModel.trim(),
-        input: [
-          {
-            role: "developer",
-            content: [
-              {
-                type: "input_text",
-                text: params.systemPrompt
-              }
-            ]
-          },
-          {
-            role: "user",
-            content: [
-              {
-                type: "input_text",
-                text: prompt
-              }
-            ]
-          }
-        ],
-        temperature: params.temperature
-      })
+      timeout: 120000,
+      maxBuffer: 1024 * 1024,
+      env: process.env
     }
   );
 
-  return requireCommitMessage(data.output_text || "", "OpenAI");
+  return requireCommitMessage(stdout, "Codex");
 }
 
 async function fetchOllamaJson<T>(
@@ -475,22 +473,109 @@ function sanitizeCommitMessage(content: string): string {
 }
 
 function formatError(error: unknown): string {
+  if (error && typeof error === "object" && "stderr" in error) {
+    const stderr = typeof (error as { stderr?: unknown }).stderr === "string"
+      ? (error as { stderr: string }).stderr.trim()
+      : "";
+    if (stderr) {
+      return stderr;
+    }
+  }
+
   return error instanceof Error ? error.message : String(error);
 }
 
-async function getOpenAiApiKeyFromCodex(): Promise<string | null> {
-  const envKey = process.env.OPENAI_API_KEY?.trim();
-  if (envKey) {
-    return envKey;
-  }
-
+async function hasCodexLogin(): Promise<boolean> {
   try {
     const authFile = join(homedir(), ".codex", "auth.json");
     const raw = await readFile(authFile, "utf8");
-    const parsed = JSON.parse(raw) as { OPENAI_API_KEY?: unknown };
-    const apiKey = typeof parsed.OPENAI_API_KEY === "string" ? parsed.OPENAI_API_KEY.trim() : "";
-    return apiKey || null;
+    const parsed = JSON.parse(raw) as {
+      auth_mode?: unknown;
+      OPENAI_API_KEY?: unknown;
+      tokens?: unknown;
+    };
+
+    const hasApiKey = typeof parsed.OPENAI_API_KEY === "string" && parsed.OPENAI_API_KEY.trim().length > 0;
+    const hasTokens = typeof parsed.tokens === "object" && parsed.tokens !== null;
+    const hasAuthMode = typeof parsed.auth_mode === "string" && parsed.auth_mode.trim().length > 0;
+
+    return hasApiKey || hasTokens || hasAuthMode;
   } catch {
-    return null;
+    return false;
   }
+}
+
+async function resolveCodexExecutable(configuredPath: string): Promise<string> {
+  const explicit = configuredPath.trim();
+  if (explicit) {
+    await ensureExecutableExists(explicit);
+    return explicit;
+  }
+
+  const envCandidates = [
+    process.env.CODEX_PATH,
+    process.env.CODEX_CLI_PATH,
+  ]
+    .map((candidate) => candidate?.trim() || "")
+    .filter((candidate) => candidate.length > 0);
+
+  for (const candidate of envCandidates) {
+    try {
+      await ensureExecutableExists(candidate);
+      return candidate;
+    } catch {
+      // Try the next candidate.
+    }
+  }
+
+  const discovered = await findBundledCodexExecutable();
+  if (discovered) {
+    return discovered;
+  }
+
+  throw new Error("Could not find the Codex CLI binary. Set ollamacommit.codexPath to the full codex executable path.");
+}
+
+async function findBundledCodexExecutable(): Promise<string | null> {
+  const extensionRoots = [
+    join(homedir(), ".vscode-server", "extensions"),
+    join(homedir(), ".vscode", "extensions"),
+  ];
+
+  for (const root of extensionRoots) {
+    try {
+      const entries = (await readdir(root, { withFileTypes: true }))
+        .filter((entry) => entry.isDirectory() && entry.name.startsWith("openai.chatgpt-"))
+        .map((entry) => entry.name)
+        .sort()
+        .reverse();
+
+      for (const entry of entries) {
+        const binRoot = join(root, entry, "bin");
+        const binChildren = await readdir(binRoot, { withFileTypes: true });
+
+        for (const child of binChildren) {
+          if (!child.isDirectory()) {
+            continue;
+          }
+
+          const candidate = join(binRoot, child.name, "codex");
+          try {
+            await ensureExecutableExists(candidate);
+            return candidate;
+          } catch {
+            // Keep searching.
+          }
+        }
+      }
+    } catch {
+      // Root not present in this environment.
+    }
+  }
+
+  return null;
+}
+
+async function ensureExecutableExists(filePath: string): Promise<void> {
+  await access(filePath);
 }
