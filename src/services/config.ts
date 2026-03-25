@@ -61,6 +61,7 @@ export type OllamaCommitConfig = {
   codexPath: string;
   systemPrompt: string;
   enableThinking: boolean;
+  ollamaUnavailableCooldownMs: number;
   maxDiffChars: number;
   temperature: number;
   copyToClipboard: boolean;
@@ -80,6 +81,7 @@ export function getConfig(): OllamaCommitConfig {
     codexPath: config.get<string>("codexPath", ""),
     systemPrompt: config.get<string>("systemPrompt", defaultSystemPrompt),
     enableThinking: config.get<boolean>("enableThinking", false),
+    ollamaUnavailableCooldownMs: config.get<number>("ollamaUnavailableCooldownMs", 30000),
     maxDiffChars: config.get<number>("maxDiffChars", 12000),
     temperature: config.get<number>("temperature", 0.2),
     copyToClipboard: config.get<boolean>("copyToClipboard", false),
@@ -88,12 +90,12 @@ export function getConfig(): OllamaCommitConfig {
 
 export type EditableSettings = Pick<
   OllamaCommitConfig,
-  "baseUrl" | "model" | "groqApiKey" | "groqModel" | "geminiApiKey" | "geminiModel" | "openaiModel" | "codexPath" | "systemPrompt" | "enableThinking"
+  "baseUrl" | "model" | "groqApiKey" | "groqModel" | "geminiApiKey" | "geminiModel" | "openaiModel" | "codexPath" | "systemPrompt" | "enableThinking" | "ollamaUnavailableCooldownMs"
 >;
 
 export async function updateEditableSettings(settings: EditableSettings): Promise<void> {
   const config = vscode.workspace.getConfiguration("ollamacommit");
-  const updates: Array<[keyof EditableSettings, string | boolean]> = [];
+  const updates: Array<[keyof EditableSettings, string | boolean | number]> = [];
 
   if (config.get<string>("baseUrl", "http://127.0.0.1:11434") !== settings.baseUrl) {
     updates.push(["baseUrl", settings.baseUrl]);
@@ -133,6 +135,10 @@ export async function updateEditableSettings(settings: EditableSettings): Promis
 
   if (config.get<boolean>("enableThinking", false) !== settings.enableThinking) {
     updates.push(["enableThinking", settings.enableThinking]);
+  }
+
+  if (config.get<number>("ollamaUnavailableCooldownMs", 30000) !== settings.ollamaUnavailableCooldownMs) {
+    updates.push(["ollamaUnavailableCooldownMs", settings.ollamaUnavailableCooldownMs]);
   }
 
   for (const [key, value] of updates) {

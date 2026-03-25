@@ -15,6 +15,7 @@ export type GenerateCommitParams = {
   codexPath: string;
   systemPrompt: string;
   enableThinking: boolean;
+  ollamaUnavailableCooldownMs: number;
   diff: string;
   temperature: number;
   cwd?: string;
@@ -60,6 +61,7 @@ type ResolvedModels = {
 };
 
 const execFileAsync = promisify(execFile);
+const ollamaUnavailableUntilByBaseUrl = new Map<string, number>();
 
 export async function generateCommitMessage(params: GenerateCommitParams): Promise<GenerateCommitResult> {
   const prompt = [
@@ -70,16 +72,28 @@ export async function generateCommitMessage(params: GenerateCommitParams): Promi
   ].join("\n");
 
   const failures: string[] = [];
+  const ollamaSkipMessage = getOllamaCooldownMessage(
+    params.baseUrl,
+    params.ollamaUnavailableCooldownMs
+  );
 
-  try {
-    const message = await generateWithOllama(params, prompt);
-    return {
-      message,
-      provider: "ollama",
-      model: params.model,
-    };
-  } catch (error) {
-    failures.push(`Ollama: ${formatError(error)}`);
+  if (ollamaSkipMessage) {
+    failures.push(`Ollama: ${ollamaSkipMessage}`);
+  } else {
+    try {
+      const message = await generateWithOllama(params, prompt);
+      clearOllamaUnavailable(params.baseUrl);
+      return {
+        message,
+        provider: "ollama",
+        model: params.model,
+      };
+    } catch (error) {
+      if (isOllamaReachabilityError(error) && params.ollamaUnavailableCooldownMs > 0) {
+        markOllamaUnavailable(params.baseUrl, params.ollamaUnavailableCooldownMs);
+      }
+      failures.push(`Ollama: ${formatError(error)}`);
+    }
   }
 
   if (await hasCodexLogin()) {
@@ -483,6 +497,46 @@ function formatError(error: unknown): string {
   }
 
   return error instanceof Error ? error.message : String(error);
+}
+
+function isOllamaReachabilityError(error: unknown): boolean {
+  const message = formatError(error);
+  return message.includes("Unable to reach Ollama");
+}
+
+function getOllamaCooldownMessage(baseUrl: string, cooldownMs: number): string | null {
+  if (cooldownMs <= 0) {
+    return null;
+  }
+
+  const unavailableUntil = ollamaUnavailableUntilByBaseUrl.get(normalizeBaseUrl(baseUrl));
+  if (!unavailableUntil) {
+    return null;
+  }
+
+  const remainingMs = unavailableUntil - Date.now();
+  if (remainingMs <= 0) {
+    ollamaUnavailableUntilByBaseUrl.delete(normalizeBaseUrl(baseUrl));
+    return null;
+  }
+
+  const remainingSeconds = Math.ceil(remainingMs / 1000);
+  return `skipped for ${remainingSeconds}s because a recent reachability check already failed`;
+}
+
+function markOllamaUnavailable(baseUrl: string, cooldownMs: number): void {
+  if (cooldownMs <= 0) {
+    return;
+  }
+
+  ollamaUnavailableUntilByBaseUrl.set(
+    normalizeBaseUrl(baseUrl),
+    Date.now() + cooldownMs
+  );
+}
+
+function clearOllamaUnavailable(baseUrl: string): void {
+  ollamaUnavailableUntilByBaseUrl.delete(normalizeBaseUrl(baseUrl));
 }
 
 async function hasCodexLogin(): Promise<boolean> {
