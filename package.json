@@ -2,7 +2,7 @@
   "name": "ollamacommit",
   "displayName": "Ollama Commit Message",
   "description": "Generate Git commit messages in VS Code using Ollama with Groq, Gemini, and Codex/OpenAI fallbacks.",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "publisher": "Nice0w0",
   "icon": "media/ollama-commit-title.png",
   "license": "MIT",
@@ -126,6 +126,12 @@
           "type": "boolean",
           "default": false,
           "description": "Allow supported models to use thinking/reasoning mode internally before returning the final commit message."
+        },
+        "ollamacommit.ollamaUnavailableCooldownMs": {
+          "type": "number",
+          "default": 30000,
+          "minimum": 0,
+          "description": "When Ollama cannot be reached, skip retrying it for this many milliseconds before trying it again."
         },
         "ollamacommit.maxDiffChars": {
           "type": "number",
