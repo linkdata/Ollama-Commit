@@ -2,7 +2,7 @@
   "name": "ollamacommit",
   "displayName": "Ollama Commit Message",
   "description": "Generate Git commit messages in VS Code using Ollama with Groq, Gemini, and Codex/OpenAI fallbacks.",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "publisher": "Nice0w0",
   "icon": "media/ollama-commit-title.png",
   "license": "MIT",

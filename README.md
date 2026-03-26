@@ -1,7 +1,7 @@
 # Ollama Commit
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Nice0w0/Ollama-Commit/main/ollama-commit-title.png" alt="Ollama Commit cover" width="860" />
+  <img src="https://github.com/Nice0w0/Ollama-Commit/blob/main/media/ollama-commit-title.png?raw=true" alt="Ollama Commit cover" width="860" />
 </p>
 
 Generate Git commit messages in VS Code with Ollama, with Groq, Gemini, and Codex/OpenAI fallback support.

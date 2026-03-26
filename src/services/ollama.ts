@@ -626,7 +626,13 @@ async function resolveCodexExecutable(configuredPath: string): Promise<string> {
 async function findBundledCodexExecutable(): Promise<string | null> {
   const extensionRoots = [
     join(homedir(), ".vscode-server", "extensions"),
+    join(homedir(), ".vscode-server-insiders", "extensions"),
     join(homedir(), ".vscode", "extensions"),
+    join(homedir(), ".vscode-insiders", "extensions"),
+    join(homedir(), ".cursor-server", "extensions"),
+    join(homedir(), ".cursor", "extensions"),
+    join(homedir(), ".windsurf-server", "extensions"),
+    join(homedir(), ".windsurf", "extensions"),
   ];
 
   for (const root of extensionRoots) {
