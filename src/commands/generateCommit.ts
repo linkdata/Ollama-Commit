@@ -52,6 +52,8 @@ export async function runGenerateCommit() {
         geminiModel: config.geminiModel,
         openaiModel: config.openaiModel,
         codexPath: config.codexPath,
+        claudePath: config.claudePath,
+        claudeModel: config.claudeModel,
         systemPrompt: config.systemPrompt,
         enableThinking: config.enableThinking,
         ollamaUnavailableCooldownMs: config.ollamaUnavailableCooldownMs,

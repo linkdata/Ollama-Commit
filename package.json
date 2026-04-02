@@ -1,7 +1,7 @@
 {
   "name": "ollamacommit",
   "displayName": "Ollama Commit Message",
-  "description": "Generate Git commit messages in VS Code using Ollama with Groq, Gemini, and Codex/OpenAI fallbacks.",
+  "description": "Generate Git commit messages in VS Code using Ollama with Codex, Claude Code, Groq, and Gemini fallbacks.",
   "version": "0.2.4",
   "publisher": "Nice0w0",
   "icon": "media/ollama-commit-title.png",
@@ -31,6 +31,8 @@
     "gemini",
     "openai",
     "codex",
+    "claude",
+    "anthropic",
     "git",
     "commit",
     "commit message",
@@ -116,6 +118,16 @@
           "type": "string",
           "default": "",
           "description": "Optional absolute path to the Codex CLI binary when the extension host PATH does not include it."
+        },
+        "ollamacommit.claudePath": {
+          "type": "string",
+          "default": "",
+          "description": "Optional absolute path to the Claude Code CLI binary. Leave empty to auto-detect from ~/.local/bin/claude or PATH."
+        },
+        "ollamacommit.claudeModel": {
+          "type": "string",
+          "default": "sonnet",
+          "description": "Claude Code model used as a fallback between Codex and Groq. Examples: haiku, sonnet, opus."
         },
         "ollamacommit.systemPrompt": {
           "type": "string",

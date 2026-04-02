@@ -17,6 +17,8 @@ export type OllamaCommitConfig = {
   geminiModel: string;
   openaiModel: string;
   codexPath: string;
+  claudePath: string;
+  claudeModel: string;
   systemPrompt: string;
   enableThinking: boolean;
   ollamaUnavailableCooldownMs: number;
@@ -37,6 +39,8 @@ export function getConfig(): OllamaCommitConfig {
     geminiModel: config.get<string>("geminiModel", "gemini-2.0-flash-lite"),
     openaiModel: config.get<string>("openaiModel", ""),
     codexPath: config.get<string>("codexPath", ""),
+    claudePath: config.get<string>("claudePath", ""),
+    claudeModel: config.get<string>("claudeModel", "sonnet"),
     systemPrompt: config.get<string>("systemPrompt", defaultSystemPrompt),
     enableThinking: config.get<boolean>("enableThinking", false),
     ollamaUnavailableCooldownMs: config.get<number>("ollamaUnavailableCooldownMs", 172800000),
@@ -48,7 +52,7 @@ export function getConfig(): OllamaCommitConfig {
 
 export type EditableSettings = Pick<
   OllamaCommitConfig,
-  "baseUrl" | "model" | "groqApiKey" | "groqModel" | "geminiApiKey" | "geminiModel" | "openaiModel" | "codexPath" | "systemPrompt" | "enableThinking" | "ollamaUnavailableCooldownMs"
+  "baseUrl" | "model" | "groqApiKey" | "groqModel" | "geminiApiKey" | "geminiModel" | "openaiModel" | "codexPath" | "claudePath" | "claudeModel" | "systemPrompt" | "enableThinking" | "ollamaUnavailableCooldownMs"
 >;
 
 export async function updateEditableSettings(settings: EditableSettings): Promise<void> {
@@ -85,6 +89,14 @@ export async function updateEditableSettings(settings: EditableSettings): Promis
 
   if (config.get<string>("codexPath", "") !== settings.codexPath) {
     updates.push(["codexPath", settings.codexPath]);
+  }
+
+  if (config.get<string>("claudePath", "") !== settings.claudePath) {
+    updates.push(["claudePath", settings.claudePath]);
+  }
+
+  if (config.get<string>("claudeModel", "sonnet") !== settings.claudeModel) {
+    updates.push(["claudeModel", settings.claudeModel]);
   }
 
   if (config.get<string>("systemPrompt", defaultSystemPrompt) !== settings.systemPrompt) {

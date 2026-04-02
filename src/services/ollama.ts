@@ -1,5 +1,5 @@
 import { access, readFile, readdir } from "node:fs/promises";
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -13,6 +13,8 @@ export type GenerateCommitParams = {
   geminiModel: string;
   openaiModel: string;
   codexPath: string;
+  claudePath: string;
+  claudeModel: string;
   systemPrompt: string;
   enableThinking: boolean;
   ollamaUnavailableCooldownMs: number;
@@ -23,7 +25,7 @@ export type GenerateCommitParams = {
 
 export type GenerateCommitResult = {
   message: string;
-  provider: "ollama" | "groq" | "gemini" | "codex";
+  provider: "ollama" | "groq" | "gemini" | "codex" | "claude";
   model: string;
 };
 
@@ -61,6 +63,46 @@ type ResolvedModels = {
 };
 
 const execFileAsync = promisify(execFile);
+
+function spawnWithClosedStdin(
+  file: string,
+  args: string[],
+  timeoutMs: number
+): Promise<{ stdout: string; stderr: string }> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(file, args, {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: process.env,
+    });
+
+    let stdout = "";
+    let stderr = "";
+
+    child.stdout.on("data", (data: Buffer) => { stdout += data.toString(); });
+    child.stderr.on("data", (data: Buffer) => { stderr += data.toString(); });
+
+    const timer = setTimeout(() => {
+      child.kill();
+      reject(new Error(`Process timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+
+    child.on("close", (code) => {
+      clearTimeout(timer);
+      if (code === 0) {
+        resolve({ stdout, stderr });
+      } else {
+        const error = new Error(stderr.trim() || `Process exited with code ${code}`) as Error & { stderr: string };
+        error.stderr = stderr;
+        reject(error);
+      }
+    });
+
+    child.on("error", (err) => {
+      clearTimeout(timer);
+      reject(err);
+    });
+  });
+}
 const ollamaUnavailableUntilByBaseUrl = new Map<string, number>();
 const ollamaRecoveryProbeTimeoutMs = 1500;
 
@@ -128,6 +170,21 @@ export async function generateCommitMessage(params: GenerateCommitParams): Promi
     }
   } else {
     failures.push("Codex CLI: skipped because no local Codex login was found");
+  }
+
+  if (await hasClaudeCodeCli(params.claudePath)) {
+    try {
+      const message = await generateWithClaudeCode(params, prompt);
+      return {
+        message,
+        provider: "claude",
+        model: params.claudeModel || "claude default",
+      };
+    } catch (error) {
+      failures.push(`Claude Code: ${formatError(error)}`);
+    }
+  } else {
+    failures.push("Claude Code: skipped because the claude CLI was not found");
   }
 
   if (params.groqApiKey.trim()) {
@@ -343,17 +400,31 @@ async function generateWithCodex(params: GenerateCommitParams, prompt: string): 
 
   args.push(instruction);
 
-  const { stdout } = await execFileAsync(
-    codexExecutable,
-    args,
-    {
-      timeout: 120000,
-      maxBuffer: 1024 * 1024,
-      env: process.env
-    }
-  );
+  const { stdout } = await spawnWithClosedStdin(codexExecutable, args, 120000);
 
   return requireCommitMessage(stdout, "Codex");
+}
+
+async function generateWithClaudeCode(params: GenerateCommitParams, prompt: string): Promise<string> {
+  const claudeExecutable = await resolveClaudeExecutable(params.claudePath);
+  const configuredModel = params.claudeModel.trim();
+
+  const args = [
+    "-p",
+    "--no-session-persistence",
+    "--bare",
+  ];
+
+  if (configuredModel) {
+    args.push("--model", configuredModel);
+  }
+
+  args.push("--append-system-prompt", params.systemPrompt);
+  args.push(prompt);
+
+  const { stdout } = await spawnWithClosedStdin(claudeExecutable, args, 120000);
+
+  return requireCommitMessage(stdout, "Claude Code");
 }
 
 async function fetchOllamaJson<T>(
@@ -667,6 +738,44 @@ async function findBundledCodexExecutable(): Promise<string | null> {
   }
 
   return null;
+}
+
+async function hasClaudeCodeCli(configuredPath: string): Promise<boolean> {
+  try {
+    const claudeExecutable = await resolveClaudeExecutable(configuredPath);
+    await ensureExecutableExists(claudeExecutable);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function resolveClaudeExecutable(configuredPath: string): Promise<string> {
+  const explicit = configuredPath.trim();
+  if (explicit) {
+    await ensureExecutableExists(explicit);
+    return explicit;
+  }
+
+  const envPath = process.env.CLAUDE_PATH?.trim();
+  if (envPath) {
+    try {
+      await ensureExecutableExists(envPath);
+      return envPath;
+    } catch {
+      // Try next candidate.
+    }
+  }
+
+  const localBin = join(homedir(), ".local", "bin", "claude");
+  try {
+    await ensureExecutableExists(localBin);
+    return localBin;
+  } catch {
+    // Fall through to bare name.
+  }
+
+  return "claude";
 }
 
 async function ensureExecutableExists(filePath: string): Promise<void> {

@@ -11,6 +11,8 @@ type SettingsState = {
   geminiModel: string;
   openaiModel: string;
   codexPath: string;
+  claudePath: string;
+  claudeModel: string;
   systemPrompt: string;
   enableThinking: boolean;
   ollamaUnavailableCooldownMs: number;
@@ -32,6 +34,8 @@ type IncomingMessage =
       geminiModel: string;
       openaiModel: string;
       codexPath: string;
+      claudePath: string;
+      claudeModel: string;
       systemPrompt: string;
       enableThinking: boolean;
       ollamaUnavailableCooldownMs: number;
@@ -120,6 +124,8 @@ export class SettingsPanel {
             geminiModel: message.geminiModel.trim(),
             openaiModel: message.openaiModel.trim(),
             codexPath: message.codexPath.trim(),
+            claudePath: message.claudePath.trim(),
+            claudeModel: message.claudeModel.trim(),
             systemPrompt: message.systemPrompt.trim(),
             enableThinking: message.enableThinking,
             ollamaUnavailableCooldownMs: Math.max(0, Number(message.ollamaUnavailableCooldownMs) || 0),
@@ -172,6 +178,8 @@ export class SettingsPanel {
       geminiModel: config.geminiModel,
       openaiModel: config.openaiModel,
       codexPath: config.codexPath,
+      claudePath: config.claudePath,
+      claudeModel: config.claudeModel,
       systemPrompt: config.systemPrompt,
       enableThinking: config.enableThinking,
       ollamaUnavailableCooldownMs: config.ollamaUnavailableCooldownMs,
@@ -376,7 +384,7 @@ export class SettingsPanel {
   <main class="shell">
     <section class="hero">
       <h1>Ollama Commit Settings</h1>
-      <p>Try Ollama first, then fall back to local Codex CLI, then API-key providers when Ollama is unavailable.</p>
+      <p>Try Ollama first, then fall back to local Codex CLI, then Claude Code CLI, then API-key providers when Ollama is unavailable.</p>
     </section>
 
     <section class="card">
@@ -431,6 +439,18 @@ export class SettingsPanel {
       </div>
 
       <div class="field">
+        <label for="claudePath">Claude Code CLI Path</label>
+        <input id="claudePath" type="text" placeholder="Leave empty to auto-detect claude" />
+        <div class="hint">Optional absolute path to the <code>claude</code> binary when the extension host PATH does not include it.</div>
+      </div>
+
+      <div class="field">
+        <label for="claudeModel">Claude Code Model</label>
+        <input id="claudeModel" type="text" placeholder="sonnet" />
+        <div class="hint">Model passed to <code>claude --model</code>. Examples: haiku (fast/cheap), sonnet (balanced), opus (most capable).</div>
+      </div>
+
+      <div class="field">
         <label for="ollamaUnavailableCooldownMs">Ollama Unavailable Cooldown (ms)</label>
         <input id="ollamaUnavailableCooldownMs" type="number" min="0" step="1000" placeholder="172800000" />
         <div class="hint">When Ollama cannot be reached, skip retrying it for this long and jump straight to fallbacks. Each request still does a quick hidden probe and re-enables Ollama immediately if it comes back.</div>
@@ -470,6 +490,8 @@ export class SettingsPanel {
     const geminiModelInput = document.getElementById("geminiModel");
     const openaiModelInput = document.getElementById("openaiModel");
     const codexPathInput = document.getElementById("codexPath");
+    const claudePathInput = document.getElementById("claudePath");
+    const claudeModelInput = document.getElementById("claudeModel");
     const ollamaUnavailableCooldownMsInput = document.getElementById("ollamaUnavailableCooldownMs");
     const systemPromptInput = document.getElementById("systemPrompt");
     const enableThinkingInput = document.getElementById("enableThinking");
@@ -540,6 +562,8 @@ export class SettingsPanel {
       geminiModelInput.value = payload.geminiModel || "";
       openaiModelInput.value = payload.openaiModel || "";
       codexPathInput.value = payload.codexPath || "";
+      claudePathInput.value = payload.claudePath || "";
+      claudeModelInput.value = payload.claudeModel || "";
       ollamaUnavailableCooldownMsInput.value = String(payload.ollamaUnavailableCooldownMs ?? 172800000);
       setModels(payload.models || [], payload.model || "");
 
@@ -548,7 +572,7 @@ export class SettingsPanel {
       } else if (payload.resolvedBaseUrl && payload.resolvedBaseUrl !== payload.baseUrl) {
         setStatus("Connected through " + payload.resolvedBaseUrl + " while keeping your saved URL unchanged.", "ok");
       } else if ((payload.models || []).length > 0) {
-        setStatus("Models loaded from Ollama. Fallback order: Codex, Groq, then Gemini.", "ok");
+        setStatus("Models loaded from Ollama. Fallback order: Codex, Claude Code, Groq, then Gemini.", "ok");
       } else {
         setStatus("");
       }
@@ -575,6 +599,8 @@ export class SettingsPanel {
         geminiModel: geminiModelInput.value,
         openaiModel: openaiModelInput.value,
         codexPath: codexPathInput.value,
+        claudePath: claudePathInput.value,
+        claudeModel: claudeModelInput.value,
         systemPrompt: systemPromptInput.value,
         enableThinking: enableThinkingInput.checked,
         ollamaUnavailableCooldownMs: Number(ollamaUnavailableCooldownMsInput.value)
