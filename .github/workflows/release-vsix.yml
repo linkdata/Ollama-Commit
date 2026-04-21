@@ -1,0 +1,116 @@
+name: Release VSIX
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag to publish (for example v0.3.1)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Resolve release tag
+        id: release_tag
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            tag="${{ inputs.tag }}"
+          else
+            tag="${GITHUB_REF_NAME}"
+          fi
+
+          if [[ -z "${tag}" ]]; then
+            echo "::error::Unable to resolve release tag."
+            exit 1
+          fi
+
+          echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
+          echo "RELEASE_TAG=${tag}" >> "${GITHUB_ENV}"
+
+      - name: Validate manual tag exists
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --tags --force
+
+          if ! git rev-parse -q --verify "refs/tags/${RELEASE_TAG}" >/dev/null; then
+            echo "::error::Tag '${RELEASE_TAG}' does not exist. Manual releases require an existing tag."
+            exit 1
+          fi
+
+      - name: Checkout exact release ref
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout --detach "refs/tags/${RELEASE_TAG}"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Validate tag matches package.json version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          package_version="$(node -p "require('./package.json').version")"
+          expected_tag="v${package_version}"
+
+          if [[ "${RELEASE_TAG}" != "${expected_tag}" ]]; then
+            echo "::error::Tag/version mismatch. Got '${RELEASE_TAG}', expected '${expected_tag}' from package.json."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build VSIX
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f ./*.vsix
+          npm run package
+
+      - name: Resolve VSIX path
+        id: vsix
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(./*.vsix)
+
+          if (( ${#files[@]} != 1 )); then
+            echo "::error::Expected exactly one VSIX file, found ${#files[@]}."
+            ls -la ./*.vsix || true
+            exit 1
+          fi
+
+          echo "path=${files[0]}" >> "${GITHUB_OUTPUT}"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          files: ${{ steps.vsix.outputs.path }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
