@@ -46,20 +46,10 @@ export async function runGenerateCommit() {
       const result = await generateCommitMessage({
         baseUrl: config.baseUrl,
         model: config.model,
-        groqApiKey: config.groqApiKey,
-        groqModel: config.groqModel,
-        geminiApiKey: config.geminiApiKey,
-        geminiModel: config.geminiModel,
-        openaiModel: config.openaiModel,
-        codexPath: config.codexPath,
-        claudePath: config.claudePath,
-        claudeModel: config.claudeModel,
         systemPrompt: config.systemPrompt,
         enableThinking: config.enableThinking,
-        ollamaUnavailableCooldownMs: config.ollamaUnavailableCooldownMs,
         diff: trimmedDiff,
         temperature: config.temperature,
-        cwd
       });
 
       const { message, provider, model } = result;

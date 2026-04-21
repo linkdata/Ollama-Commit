@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
+    "module": "node16",
     "target": "ES2022",
     "outDir": "dist",
     "lib": ["ES2022"],
@@ -8,7 +8,7 @@
     "rootDir": "src",
     "strict": true,
     "esModuleInterop": true,
-    "moduleResolution": "node",
+    "moduleResolution": "node16",
     "types": ["node", "vscode"]
   },
   "include": ["src"]

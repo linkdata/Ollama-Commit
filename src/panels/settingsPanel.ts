@@ -5,17 +5,8 @@ import { listOllamaModels } from "../services/ollama";
 type SettingsState = {
   baseUrl: string;
   model: string;
-  groqApiKey: string;
-  groqModel: string;
-  geminiApiKey: string;
-  geminiModel: string;
-  openaiModel: string;
-  codexPath: string;
-  claudePath: string;
-  claudeModel: string;
   systemPrompt: string;
   enableThinking: boolean;
-  ollamaUnavailableCooldownMs: number;
   models: string[];
   error: string | null;
   resolvedBaseUrl: string | null;
@@ -28,17 +19,8 @@ type IncomingMessage =
       type: "save";
       baseUrl: string;
       model: string;
-      groqApiKey: string;
-      groqModel: string;
-      geminiApiKey: string;
-      geminiModel: string;
-      openaiModel: string;
-      codexPath: string;
-      claudePath: string;
-      claudeModel: string;
       systemPrompt: string;
       enableThinking: boolean;
-      ollamaUnavailableCooldownMs: number;
     };
 
 type OutgoingMessage =
@@ -118,17 +100,8 @@ export class SettingsPanel {
           await updateEditableSettings({
             baseUrl: message.baseUrl.trim(),
             model: message.model.trim(),
-            groqApiKey: message.groqApiKey.trim(),
-            groqModel: message.groqModel.trim(),
-            geminiApiKey: message.geminiApiKey.trim(),
-            geminiModel: message.geminiModel.trim(),
-            openaiModel: message.openaiModel.trim(),
-            codexPath: message.codexPath.trim(),
-            claudePath: message.claudePath.trim(),
-            claudeModel: message.claudeModel.trim(),
             systemPrompt: message.systemPrompt.trim(),
             enableThinking: message.enableThinking,
-            ollamaUnavailableCooldownMs: Math.max(0, Number(message.ollamaUnavailableCooldownMs) || 0),
           });
 
           await this.panel.webview.postMessage({
@@ -172,17 +145,8 @@ export class SettingsPanel {
     const state: SettingsState = {
       baseUrl,
       model: config.model,
-      groqApiKey: config.groqApiKey,
-      groqModel: config.groqModel,
-      geminiApiKey: config.geminiApiKey,
-      geminiModel: config.geminiModel,
-      openaiModel: config.openaiModel,
-      codexPath: config.codexPath,
-      claudePath: config.claudePath,
-      claudeModel: config.claudeModel,
       systemPrompt: config.systemPrompt,
       enableThinking: config.enableThinking,
-      ollamaUnavailableCooldownMs: config.ollamaUnavailableCooldownMs,
       models,
       error,
       resolvedBaseUrl,
@@ -384,7 +348,7 @@ export class SettingsPanel {
   <main class="shell">
     <section class="hero">
       <h1>Ollama Commit Settings</h1>
-      <p>Try Ollama first, then fall back to local Codex CLI, then Claude Code CLI, then API-key providers when Ollama is unavailable.</p>
+      <p>Generate commit messages from your staged diff using a local Ollama server.</p>
     </section>
 
     <section class="card">
@@ -402,58 +366,6 @@ export class SettingsPanel {
         <select id="modelSelect"></select>
         <input id="modelInput" type="text" placeholder="Type a model name, for example qwen2.5-coder:7b" />
         <div class="hint">Pick from the detected models or type a custom model name manually.</div>
-      </div>
-
-      <div class="field">
-        <label for="groqApiKey">Groq API Key</label>
-        <input id="groqApiKey" type="password" placeholder="Optional fallback key" />
-        <div class="hint">Used only if Ollama cannot be reached.</div>
-      </div>
-
-      <div class="field">
-        <label for="groqModel">Groq Model</label>
-        <input id="groqModel" type="text" placeholder="openai/gpt-oss-20b" />
-      </div>
-
-      <div class="field">
-        <label for="geminiApiKey">Gemini API Key</label>
-        <input id="geminiApiKey" type="password" placeholder="Optional fallback key" />
-        <div class="hint">Used after Groq if Ollama is unavailable or Groq fails.</div>
-      </div>
-
-      <div class="field">
-        <label for="geminiModel">Gemini Model</label>
-        <input id="geminiModel" type="text" placeholder="gemini-2.0-flash-lite" />
-      </div>
-
-      <div class="field">
-        <label for="openaiModel">Codex/OpenAI Fallback Model</label>
-        <input id="openaiModel" type="text" placeholder="Leave empty to use Codex default model" />
-        <div class="hint">Used last through local <code>codex exec</code>. Leave empty to use the model already configured in Codex.</div>
-      </div>
-
-      <div class="field">
-        <label for="codexPath">Codex CLI Path</label>
-        <input id="codexPath" type="text" placeholder="Leave empty to auto-detect codex" />
-        <div class="hint">Optional absolute path to the <code>codex</code> binary when the extension host PATH does not include it.</div>
-      </div>
-
-      <div class="field">
-        <label for="claudePath">Claude Code CLI Path</label>
-        <input id="claudePath" type="text" placeholder="Leave empty to auto-detect claude" />
-        <div class="hint">Optional absolute path to the <code>claude</code> binary when the extension host PATH does not include it.</div>
-      </div>
-
-      <div class="field">
-        <label for="claudeModel">Claude Code Model</label>
-        <input id="claudeModel" type="text" placeholder="sonnet" />
-        <div class="hint">Model passed to <code>claude --model</code>. Examples: haiku (fast/cheap), sonnet (balanced), opus (most capable).</div>
-      </div>
-
-      <div class="field">
-        <label for="ollamaUnavailableCooldownMs">Ollama Unavailable Cooldown (ms)</label>
-        <input id="ollamaUnavailableCooldownMs" type="number" min="0" step="1000" placeholder="172800000" />
-        <div class="hint">When Ollama cannot be reached, skip retrying it for this long and jump straight to fallbacks. Each request still does a quick hidden probe and re-enables Ollama immediately if it comes back.</div>
       </div>
 
       <div class="field">
@@ -484,15 +396,6 @@ export class SettingsPanel {
     const baseUrlInput = document.getElementById("baseUrl");
     const modelSelect = document.getElementById("modelSelect");
     const modelInput = document.getElementById("modelInput");
-    const groqApiKeyInput = document.getElementById("groqApiKey");
-    const groqModelInput = document.getElementById("groqModel");
-    const geminiApiKeyInput = document.getElementById("geminiApiKey");
-    const geminiModelInput = document.getElementById("geminiModel");
-    const openaiModelInput = document.getElementById("openaiModel");
-    const codexPathInput = document.getElementById("codexPath");
-    const claudePathInput = document.getElementById("claudePath");
-    const claudeModelInput = document.getElementById("claudeModel");
-    const ollamaUnavailableCooldownMsInput = document.getElementById("ollamaUnavailableCooldownMs");
     const systemPromptInput = document.getElementById("systemPrompt");
     const enableThinkingInput = document.getElementById("enableThinking");
     const status = document.getElementById("status");
@@ -556,15 +459,6 @@ export class SettingsPanel {
       systemPromptInput.value = payload.systemPrompt || "";
       enableThinkingInput.checked = Boolean(payload.enableThinking);
       modelInput.value = payload.model || "";
-      groqApiKeyInput.value = payload.groqApiKey || "";
-      groqModelInput.value = payload.groqModel || "";
-      geminiApiKeyInput.value = payload.geminiApiKey || "";
-      geminiModelInput.value = payload.geminiModel || "";
-      openaiModelInput.value = payload.openaiModel || "";
-      codexPathInput.value = payload.codexPath || "";
-      claudePathInput.value = payload.claudePath || "";
-      claudeModelInput.value = payload.claudeModel || "";
-      ollamaUnavailableCooldownMsInput.value = String(payload.ollamaUnavailableCooldownMs ?? 172800000);
       setModels(payload.models || [], payload.model || "");
 
       if (payload.error) {
@@ -572,7 +466,7 @@ export class SettingsPanel {
       } else if (payload.resolvedBaseUrl && payload.resolvedBaseUrl !== payload.baseUrl) {
         setStatus("Connected through " + payload.resolvedBaseUrl + " while keeping your saved URL unchanged.", "ok");
       } else if ((payload.models || []).length > 0) {
-        setStatus("Models loaded from Ollama. Fallback order: Codex, Claude Code, Groq, then Gemini.", "ok");
+        setStatus("Models loaded from Ollama.", "ok");
       } else {
         setStatus("");
       }
@@ -593,17 +487,8 @@ export class SettingsPanel {
         type: "save",
         baseUrl: baseUrlInput.value,
         model: modelInput.value,
-        groqApiKey: groqApiKeyInput.value,
-        groqModel: groqModelInput.value,
-        geminiApiKey: geminiApiKeyInput.value,
-        geminiModel: geminiModelInput.value,
-        openaiModel: openaiModelInput.value,
-        codexPath: codexPathInput.value,
-        claudePath: claudePathInput.value,
-        claudeModel: claudeModelInput.value,
         systemPrompt: systemPromptInput.value,
-        enableThinking: enableThinkingInput.checked,
-        ollamaUnavailableCooldownMs: Number(ollamaUnavailableCooldownMsInput.value)
+        enableThinking: enableThinkingInput.checked
       });
     });
 

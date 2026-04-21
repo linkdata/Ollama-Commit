@@ -1,26 +1,25 @@
 # Ollama Commit
 
-Generate Git commit messages in VS Code with Ollama, with Codex, Claude Code, Groq, and Gemini fallback support.
+Generate Git commit messages in VS Code using a local Ollama server.
 
-Ollama Commit is a lightweight VS Code extension that reads your Git diff, sends it to your local or remote Ollama server, and writes the generated commit message into the Source Control input box for you. If Ollama is unavailable, it can fall back to local Codex CLI first, then Claude Code CLI, then Groq, then Gemini.
+Ollama Commit is a lightweight VS Code extension that reads your Git diff, sends it to your local or remote Ollama server, and writes the generated commit message into the Source Control input box for you.
 
 ## Why Use It
 
 - Write commit messages faster
 - Keep commit messages consistent
 - Use your own Ollama model
-- Stay local when running Ollama on your machine
+- Stay local — your diff never leaves your machine
 
 ## Features
 
 - Generate commit messages from staged changes
-- Fall back to Codex, Claude Code, Groq, and Gemini when Ollama is unavailable
-- Fall back gracefully when nothing is staged
 - Add a `Generate Commit Message` button to the Source Control toolbar
 - Open a dedicated settings page inside VS Code
 - Load available models directly from Ollama
 - Optionally copy the generated message to the clipboard
 - Handle common Windows and WSL networking cases
+- Fail fast on subsequent requests when Ollama is unreachable
 
 ## Quick Start
 
@@ -31,22 +30,14 @@ Ollama Commit is a lightweight VS Code extension that reads your Git diff, sends
 5. Stage your changes if needed.
 6. Open Source Control and click `Generate Commit Message`.
 
-Optional fallback setup:
-
-1. Optionally keep a local Codex login on the same machine so the extension can use `codex exec` as a fallback.
-2. Install Claude Code CLI (`claude`) for an additional fallback. Set `ollamacommit.claudeModel` to choose a model (default: `sonnet`).
-3. Create a Groq API key and set `ollamacommit.groqApiKey`.
-4. Create a Gemini API key and set `ollamacommit.geminiApiKey`.
-5. Keep Ollama as the primary provider. The extension will try Codex first, Claude Code second, Groq third, and Gemini fourth if Ollama cannot be reached.
-
 Example:
 
 ```bash
 ollama serve
-ollama run minimax-m2.7:cloud
+ollama run qwen2.5-coder:7b
 ```
 
-Then set `ollamacommit.model` to `minimax-m2.7:cloud` in the extension settings.
+Then set `ollamacommit.model` to `qwen2.5-coder:7b` (the default) in the extension settings.
 
 Default Ollama URL:
 
@@ -62,9 +53,8 @@ http://127.0.0.1:11434
    - `Use Unstaged Changes`
 3. The diff is trimmed to the configured max size.
 4. The extension sends the diff to Ollama.
-5. If Ollama is unavailable, the extension tries local Codex CLI, then Claude Code CLI, then Groq, then Gemini.
-6. The active provider returns a commit message.
-7. The result is inserted into the VS Code Source Control commit box.
+5. Ollama returns a commit message.
+6. The result is inserted into the VS Code Source Control commit box.
 
 If VS Code cannot insert the message into Source Control directly, the extension copies it to your clipboard instead.
 
@@ -86,18 +76,9 @@ Or search for `Ollama Commit` in VS Code Settings.
 | Setting | Description | Default |
 | --- | --- | --- |
 | `ollamacommit.baseUrl` | Ollama server URL | `http://127.0.0.1:11434` |
-| `ollamacommit.model` | Model used to generate commit messages. For this setup, use `minimax-m2.7:cloud`. | `qwen2.5-coder:7b` |
-| `ollamacommit.groqApiKey` | Groq API key used when Ollama is unavailable | `""` |
-| `ollamacommit.groqModel` | Groq model used as the first fallback | `openai/gpt-oss-20b` |
-| `ollamacommit.geminiApiKey` | Gemini API key used when Ollama and Groq are unavailable | `""` |
-| `ollamacommit.geminiModel` | Gemini model used as the second fallback | `gemini-2.0-flash-lite` |
-| `ollamacommit.openaiModel` | Optional model override for the last fallback through local Codex CLI. Leave empty to use Codex's configured default model | `""` |
-| `ollamacommit.codexPath` | Optional absolute path to the Codex CLI binary when the extension host PATH does not include it | `""` |
-| `ollamacommit.claudePath` | Optional absolute path to the Claude Code CLI binary. Leave empty to auto-detect from `~/.local/bin/claude` or PATH | `""` |
-| `ollamacommit.claudeModel` | Claude Code model used as a fallback between Codex and Groq. Examples: `haiku`, `sonnet`, `opus` | `sonnet` |
+| `ollamacommit.model` | Model used to generate commit messages | `qwen2.5-coder:7b` |
 | `ollamacommit.systemPrompt` | System prompt sent before the diff | Built-in prompt |
 | `ollamacommit.enableThinking` | Allow model thinking mode before the final answer | `false` |
-| `ollamacommit.ollamaUnavailableCooldownMs` | After an Ollama connection failure, skip retrying Ollama for this many milliseconds and jump straight to fallbacks. Each request still does a quick hidden probe and re-enables Ollama immediately if it comes back | `172800000` |
 | `ollamacommit.maxDiffChars` | Maximum diff characters sent to Ollama | `12000` |
 | `ollamacommit.temperature` | Sampling temperature | `0.2` |
 | `ollamacommit.copyToClipboard` | Also copy the result to the clipboard | `false` |
@@ -137,15 +118,7 @@ Ollama Commit tries your configured `baseUrl` first and then attempts common WSL
 
 ## Privacy
 
-The extension sends your Git diff to the active provider:
-
-- Ollama through `ollamacommit.baseUrl`
-- Codex CLI when you are logged in locally and `codex exec` is available in the extension host environment
-- Claude Code CLI when the `claude` binary is available
-- Groq when `ollamacommit.groqApiKey` is configured
-- Gemini when `ollamacommit.geminiApiKey` is configured
-
-If you run Ollama locally, your data stays in your local environment. Cloud fallbacks send the diff to the selected provider. The Codex fallback sends the diff through your local Codex CLI session, and the Claude Code fallback sends the diff through your local Claude Code CLI session.
+The extension sends your Git diff to the Ollama server at `ollamacommit.baseUrl`. If you run Ollama locally, your data stays in your local environment. No other network calls are made.
 
 ## License
 

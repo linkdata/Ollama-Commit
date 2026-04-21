@@ -1,18 +1,18 @@
 {
   "name": "ollamacommit",
   "displayName": "Ollama Commit Message",
-  "description": "Generate Git commit messages in VS Code using Ollama with Codex, Claude Code, Groq, and Gemini fallbacks.",
+  "description": "Generate Git commit messages in VS Code using a local Ollama server.",
   "version": "0.3.0",
-  "publisher": "Nice0w0",
+  "publisher": "linkdata",
   "icon": "media/ollama-commit-title.png",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Nice0w0/ollamacommit.git"
+    "url": "https://github.com/linkdata/Ollama-Commit.git"
   },
-  "homepage": "https://github.com/Nice0w0/ollamacommit#readme",
+  "homepage": "https://github.com/linkdata/Ollama-Commit#readme",
   "bugs": {
-    "url": "https://github.com/Nice0w0/ollamacommit/issues"
+    "url": "https://github.com/linkdata/Ollama-Commit/issues"
   },
   "engines": {
     "vscode": "^1.90.0"
@@ -27,12 +27,6 @@
   },
   "keywords": [
     "ollama",
-    "groq",
-    "gemini",
-    "openai",
-    "codex",
-    "claude",
-    "anthropic",
     "git",
     "commit",
     "commit message",
@@ -89,61 +83,15 @@
           "default": "qwen2.5-coder:7b",
           "description": "Ollama model to use for generating commit messages."
         },
-        "ollamacommit.groqApiKey": {
-          "type": "string",
-          "default": "",
-          "description": "Groq API key used when Ollama is unavailable."
-        },
-        "ollamacommit.groqModel": {
-          "type": "string",
-          "default": "openai/gpt-oss-20b",
-          "description": "Groq model used as the first fallback when Ollama is unavailable."
-        },
-        "ollamacommit.geminiApiKey": {
-          "type": "string",
-          "default": "",
-          "description": "Gemini API key used when Ollama and Groq are unavailable."
-        },
-        "ollamacommit.geminiModel": {
-          "type": "string",
-          "default": "gemini-2.0-flash-lite",
-          "description": "Gemini model used as the second fallback when Ollama and Groq are unavailable."
-        },
-        "ollamacommit.openaiModel": {
-          "type": "string",
-          "default": "",
-          "description": "Optional model override for the last fallback through local Codex CLI. Leave empty to use Codex's configured default model."
-        },
-        "ollamacommit.codexPath": {
-          "type": "string",
-          "default": "",
-          "description": "Optional absolute path to the Codex CLI binary when the extension host PATH does not include it."
-        },
-        "ollamacommit.claudePath": {
-          "type": "string",
-          "default": "",
-          "description": "Optional absolute path to the Claude Code CLI binary. Leave empty to auto-detect from ~/.local/bin/claude or PATH."
-        },
-        "ollamacommit.claudeModel": {
-          "type": "string",
-          "default": "sonnet",
-          "description": "Claude Code model used as a fallback between Codex and Groq. Examples: haiku, sonnet, opus."
-        },
         "ollamacommit.systemPrompt": {
           "type": "string",
           "default": "You are an assistant that writes concise, clear, professional git commit messages based on staged diff.\nPrefer conventional commits.\nDo not output any thinking, reasoning, analysis, or XML-style thinking tags.\nReturn only the final commit message.",
-          "markdownDescription": "System prompt sent to the active provider before the staged diff."
+          "markdownDescription": "System prompt sent to Ollama before the staged diff."
         },
         "ollamacommit.enableThinking": {
           "type": "boolean",
           "default": false,
           "description": "Allow supported models to use thinking/reasoning mode internally before returning the final commit message."
-        },
-        "ollamacommit.ollamaUnavailableCooldownMs": {
-          "type": "number",
-          "default": 172800000,
-          "minimum": 0,
-          "description": "When Ollama cannot be reached, skip retrying it for this many milliseconds before trying it again. A quick hidden probe still runs on each request and re-enables Ollama immediately if it comes back."
         },
         "ollamacommit.maxDiffChars": {
           "type": "number",
