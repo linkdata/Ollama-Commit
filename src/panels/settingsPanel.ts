@@ -364,7 +364,7 @@ export class SettingsPanel {
       <div class="field">
         <label for="modelSelect">Model</label>
         <select id="modelSelect"></select>
-        <input id="modelInput" type="text" placeholder="Type a model name, for example qwen2.5-coder:7b" />
+        <input id="modelInput" type="text" placeholder="Type a model name, for example qwen3-coder-next:latest" />
         <div class="hint">Pick from the detected models or type a custom model name manually.</div>
       </div>
 

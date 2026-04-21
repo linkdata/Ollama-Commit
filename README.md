@@ -36,10 +36,10 @@ Example:
 
 ```bash
 ollama serve
-ollama run qwen2.5-coder:7b
+ollama run qwen3-coder-next:latest
 ```
 
-Then set `ollamacommit.model` to `qwen2.5-coder:7b` (the default) in the extension settings.
+Then set `ollamacommit.model` to `qwen3-coder-next:latest` (the default) in the extension settings.
 
 Default Ollama URL:
 
@@ -78,7 +78,7 @@ Or search for `Ollama Commit` in VS Code Settings.
 | Setting | Description | Default |
 | --- | --- | --- |
 | `ollamacommit.baseUrl` | Ollama server URL | `http://127.0.0.1:11434` |
-| `ollamacommit.model` | Model used to generate commit messages | `qwen2.5-coder:7b` |
+| `ollamacommit.model` | Model used to generate commit messages | `qwen3-coder-next:latest` |
 | `ollamacommit.systemPrompt` | System prompt sent before the diff | Built-in prompt |
 | `ollamacommit.enableThinking` | Allow model thinking mode before the final answer | `false` |
 | `ollamacommit.maxDiffChars` | Maximum diff characters sent to Ollama | `12000` |

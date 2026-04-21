@@ -23,7 +23,7 @@ export function getConfig(): OllamaCommitConfig {
 
   return {
     baseUrl: config.get<string>("baseUrl", "http://127.0.0.1:11434"),
-    model: config.get<string>("model", "qwen2.5-coder:7b"),
+    model: config.get<string>("model", "qwen3-coder-next:latest"),
     systemPrompt: config.get<string>("systemPrompt", defaultSystemPrompt),
     enableThinking: config.get<boolean>("enableThinking", false),
     maxDiffChars: config.get<number>("maxDiffChars", 12000),
@@ -45,7 +45,7 @@ export async function updateEditableSettings(settings: EditableSettings): Promis
     updates.push(["baseUrl", settings.baseUrl]);
   }
 
-  if (config.get<string>("model", "qwen2.5-coder:7b") !== settings.model) {
+  if (config.get<string>("model", "qwen3-coder-next:latest") !== settings.model) {
     updates.push(["model", settings.model]);
   }
 

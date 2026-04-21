@@ -80,7 +80,7 @@
         },
         "ollamacommit.model": {
           "type": "string",
-          "default": "qwen2.5-coder:7b",
+          "default": "qwen3-coder-next:latest",
           "description": "Ollama model to use for generating commit messages."
         },
         "ollamacommit.systemPrompt": {
