@@ -4,6 +4,8 @@ Generate Git commit messages in VS Code using a local Ollama server.
 
 Ollama Commit is a lightweight VS Code extension that reads your Git diff, sends it to your local or remote Ollama server, and writes the generated commit message into the Source Control input box for you.
 
+Forked from https://github.com/Nice0w0/Ollama-Commit
+
 ## Why Use It
 
 - Write commit messages faster
