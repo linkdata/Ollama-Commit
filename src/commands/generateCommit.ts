@@ -46,6 +46,7 @@ export async function runGenerateCommit() {
       const result = await generateCommitMessage({
         baseUrl: config.baseUrl,
         model: config.model,
+        keepAlive: config.keepAlive,
         systemPrompt: config.systemPrompt,
         enableThinking: config.enableThinking,
         diff: trimmedDiff,

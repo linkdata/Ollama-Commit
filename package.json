@@ -83,6 +83,12 @@
           "default": "qwen3-coder-next:latest",
           "description": "Ollama model to use for generating commit messages."
         },
+        "ollamacommit.keepAlive": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "description": "Optional keep_alive value passed to Ollama chat requests. Set to 0 to omit keep_alive."
+        },
         "ollamacommit.systemPrompt": {
           "type": "string",
           "default": "You are an assistant that writes concise, clear, professional git commit messages based on staged diff.\nPrefer conventional commits.\nDo not output any thinking, reasoning, analysis, or XML-style thinking tags.\nReturn only the final commit message.",

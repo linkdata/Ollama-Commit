@@ -11,6 +11,7 @@ export const defaultSystemPrompt =
 export type OllamaCommitConfig = {
   baseUrl: string;
   model: string;
+  keepAlive: number;
   systemPrompt: string;
   enableThinking: boolean;
   maxDiffChars: number;
@@ -24,6 +25,7 @@ export function getConfig(): OllamaCommitConfig {
   return {
     baseUrl: config.get<string>("baseUrl", "http://127.0.0.1:11434"),
     model: config.get<string>("model", "qwen3-coder-next:latest"),
+    keepAlive: config.get<number>("keepAlive", 0),
     systemPrompt: config.get<string>("systemPrompt", defaultSystemPrompt),
     enableThinking: config.get<boolean>("enableThinking", false),
     maxDiffChars: config.get<number>("maxDiffChars", 12000),
@@ -34,12 +36,12 @@ export function getConfig(): OllamaCommitConfig {
 
 export type EditableSettings = Pick<
   OllamaCommitConfig,
-  "baseUrl" | "model" | "systemPrompt" | "enableThinking"
+  "baseUrl" | "model" | "keepAlive" | "systemPrompt" | "enableThinking"
 >;
 
 export async function updateEditableSettings(settings: EditableSettings): Promise<void> {
   const config = vscode.workspace.getConfiguration("ollamacommit");
-  const updates: Array<[keyof EditableSettings, string | boolean]> = [];
+  const updates: Array<[keyof EditableSettings, EditableSettings[keyof EditableSettings]]> = [];
 
   if (config.get<string>("baseUrl", "http://127.0.0.1:11434") !== settings.baseUrl) {
     updates.push(["baseUrl", settings.baseUrl]);
@@ -47,6 +49,10 @@ export async function updateEditableSettings(settings: EditableSettings): Promis
 
   if (config.get<string>("model", "qwen3-coder-next:latest") !== settings.model) {
     updates.push(["model", settings.model]);
+  }
+
+  if (config.get<number>("keepAlive", 0) !== settings.keepAlive) {
+    updates.push(["keepAlive", settings.keepAlive]);
   }
 
   if (config.get<string>("systemPrompt", defaultSystemPrompt) !== settings.systemPrompt) {

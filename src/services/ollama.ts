@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 export type GenerateCommitParams = {
   baseUrl: string;
   model: string;
+  keepAlive: number;
   systemPrompt: string;
   enableThinking: boolean;
   diff: string;
@@ -23,6 +24,22 @@ type OllamaTagsResponse = {
 
 type OllamaChatResponse = {
   message?: { content?: string; thinking?: string };
+};
+
+type OllamaChatMessage = {
+  role: "system" | "user";
+  content: string;
+};
+
+type OllamaChatRequest = {
+  model: string;
+  stream: boolean;
+  think: boolean;
+  messages: OllamaChatMessage[];
+  options: {
+    temperature: number;
+  };
+  keep_alive?: number;
 };
 
 type ResolvedModels = {
@@ -85,6 +102,29 @@ export async function listOllamaModels(baseUrl: string): Promise<ResolvedModels>
 }
 
 async function generateWithOllama(params: GenerateCommitParams, prompt: string): Promise<string> {
+  const payload: OllamaChatRequest = {
+    model: params.model,
+    stream: false,
+    think: params.enableThinking,
+    messages: [
+      {
+        role: "system",
+        content: params.systemPrompt
+      },
+      {
+        role: "user",
+        content: prompt
+      }
+    ],
+    options: {
+      temperature: params.temperature
+    }
+  };
+
+  if (params.keepAlive !== 0) {
+    payload.keep_alive = params.keepAlive;
+  }
+
   const { data } = await fetchOllamaJson<OllamaChatResponse>(
     params.baseUrl,
     "/api/chat",
@@ -94,24 +134,7 @@ async function generateWithOllama(params: GenerateCommitParams, prompt: string):
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({
-        model: params.model,
-        stream: false,
-        think: params.enableThinking,
-        messages: [
-          {
-            role: "system",
-            content: params.systemPrompt
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        options: {
-          temperature: params.temperature
-        }
-      })
+      body: JSON.stringify(payload)
     }
   );
 

@@ -5,6 +5,7 @@ import { listOllamaModels } from "../services/ollama";
 type SettingsState = {
   baseUrl: string;
   model: string;
+  keepAlive: number;
   systemPrompt: string;
   enableThinking: boolean;
   models: string[];
@@ -19,6 +20,7 @@ type IncomingMessage =
       type: "save";
       baseUrl: string;
       model: string;
+      keepAlive: number;
       systemPrompt: string;
       enableThinking: boolean;
     };
@@ -89,6 +91,15 @@ export class SettingsPanel {
     }
 
     if (message.type === "save") {
+      if (!Number.isFinite(message.keepAlive) || message.keepAlive < 0) {
+        await this.panel.webview.postMessage({
+          type: "saveResult",
+          ok: false,
+          message: "Keep Alive must be a non-negative number.",
+        } satisfies OutgoingMessage);
+        return;
+      }
+
       await this.panel.webview.postMessage({
         type: "saveResult",
         ok: true,
@@ -100,6 +111,7 @@ export class SettingsPanel {
           await updateEditableSettings({
             baseUrl: message.baseUrl.trim(),
             model: message.model.trim(),
+            keepAlive: message.keepAlive,
             systemPrompt: message.systemPrompt.trim(),
             enableThinking: message.enableThinking,
           });
@@ -145,6 +157,7 @@ export class SettingsPanel {
     const state: SettingsState = {
       baseUrl,
       model: config.model,
+      keepAlive: config.keepAlive,
       systemPrompt: config.systemPrompt,
       enableThinking: config.enableThinking,
       models,
@@ -369,6 +382,12 @@ export class SettingsPanel {
       </div>
 
       <div class="field">
+        <label for="keepAlive">Keep Alive</label>
+        <input id="keepAlive" type="number" min="0" step="1" placeholder="0" />
+        <div class="hint">Set a non-zero value to send <code>keep_alive</code> with Ollama chat requests. Use <code>0</code> to disable it.</div>
+      </div>
+
+      <div class="field">
         <label for="systemPrompt">System Prompt</label>
         <textarea id="systemPrompt" placeholder="Describe how the assistant should write commit messages"></textarea>
       </div>
@@ -396,6 +415,7 @@ export class SettingsPanel {
     const baseUrlInput = document.getElementById("baseUrl");
     const modelSelect = document.getElementById("modelSelect");
     const modelInput = document.getElementById("modelInput");
+    const keepAliveInput = document.getElementById("keepAlive");
     const systemPromptInput = document.getElementById("systemPrompt");
     const enableThinkingInput = document.getElementById("enableThinking");
     const status = document.getElementById("status");
@@ -416,6 +436,14 @@ export class SettingsPanel {
       if (modelSelect.value) {
         modelInput.value = modelSelect.value;
       }
+    }
+
+    function parseKeepAlive(rawValue) {
+      const parsed = Number(rawValue);
+      if (!Number.isFinite(parsed) || parsed < 0) {
+        return null;
+      }
+      return parsed;
     }
 
     function setModels(models, currentModel) {
@@ -459,6 +487,7 @@ export class SettingsPanel {
       systemPromptInput.value = payload.systemPrompt || "";
       enableThinkingInput.checked = Boolean(payload.enableThinking);
       modelInput.value = payload.model || "";
+      keepAliveInput.value = String(payload.keepAlive ?? 0);
       setModels(payload.models || [], payload.model || "");
 
       if (payload.error) {
@@ -482,11 +511,18 @@ export class SettingsPanel {
     });
 
     saveButton.addEventListener("click", () => {
+      const keepAlive = parseKeepAlive(keepAliveInput.value);
+      if (keepAlive === null) {
+        setStatus("Keep Alive must be a non-negative number.", "error");
+        return;
+      }
+
       setStatus("Saving in background...", "");
       vscode.postMessage({
         type: "save",
         baseUrl: baseUrlInput.value,
         model: modelInput.value,
+        keepAlive,
         systemPrompt: systemPromptInput.value,
         enableThinking: enableThinkingInput.checked
       });

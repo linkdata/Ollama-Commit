@@ -79,6 +79,7 @@ Or search for `Ollama Commit` in VS Code Settings.
 | --- | --- | --- |
 | `ollamacommit.baseUrl` | Ollama server URL | `http://127.0.0.1:11434` |
 | `ollamacommit.model` | Model used to generate commit messages | `qwen3-coder-next:latest` |
+| `ollamacommit.keepAlive` | Optional keep_alive value sent to Ollama (`0` disables it) | `0` |
 | `ollamacommit.systemPrompt` | System prompt sent before the diff | Built-in prompt |
 | `ollamacommit.enableThinking` | Allow model thinking mode before the final answer | `false` |
 | `ollamacommit.maxDiffChars` | Maximum diff characters sent to Ollama | `12000` |
